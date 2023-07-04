@@ -55,6 +55,8 @@ def main(args):
     scm = args.scm
     option = args.option
     plot = args.plot
+    input_size = 2        
+
     if scm == "scm1":
         data, target, data_test, target_test = scm1_data(option, seed)
         if plot:
@@ -69,11 +71,10 @@ def main(args):
             plt.xlabel("non causal variable")
             plt.scatter(data_test[:,0], data_test[:,1])
             plt.show()
-        input_size = 2
         lr = 1e-2
     elif scm == "scm_ac":
-        data, target, data_test, target_test = scm_ac_data(option)
-
+        data, target, data_test, target_test = scm_ac_data(seed, option)
+        lr = 1e-2
     # MODEL SETUP
     model = Model(input_size).to(device)
     test_accuracy = test(model, data_test, target_test, device)

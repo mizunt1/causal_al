@@ -35,7 +35,7 @@ def scm2(seed, env1: NamedTuple=Environments(means=(0.25, 0.4, 0.1), sds=(0.075,
 def scm_ac(seed:int, env1: Tuple=(0.25, 0.20),
            env2: Tuple=(0.20, 0.25),
            prop_1 = 0.2, num_samples=200):
-    rng = np.random.default_rng(seed=seed)
+    rng = np.random.default_rng(seed)
     num_samples_env1 = int(np.ceil(prop_1*num_samples))
     x1 = rng.normal(
         0.5, 0.075, size=num_samples_env1)

@@ -52,24 +52,23 @@ def scm1_data(option, seed):
     else:
         print("option does not exist")
 
-def scm_ac_data(option, seed):
+def scm_ac_data(seed, option):
     train_dist1 = (0.40, 0.05)
     train_dist2 = (0.05, 0.40)
     prop = 0.5
-    data, target = scm_ac(seed, train_dist1, train_dist2, prop_1=prop)
+    data, target = scm_ac(seed, train_dist1, train_dist2, prop_1=prop, num_samples=200)
     data = torch.tensor(data).to(torch.float)
     target = torch.tensor(target)
     if option == "shift":
         test_dist1 = (0.05,0.40)
         test_dist2 = test_dist1
         prop = 0.5
-    elif option == "same":
+    elif option == "equal":
         test_dist1 = (0.25, 0.20)
         test_dist2= (0.10, 0.20)
-    data_test, target_test = sem_ac(seed+1, test_dist1, test_dist2, prop)
+    data_test, target_test = scm_ac(seed+1, test_dist1, test_dist2, prop_1=prop, num_samples=200)
     data_test = torch.tensor(data_test).to(torch.float)
     target_test = torch.tensor(target_test)
-    lr = 1e-2
-    input_size = 2
-
+    return data, target, data_test, target_test
+    
     
