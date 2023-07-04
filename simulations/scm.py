@@ -11,11 +11,12 @@ def scm1(seed, env1, env2,
     x_env1 = rng.multivariate_normal(
         mean=env1["means"], cov=np.eye(2)*([sd**2 for sd in env1["sds"]]), size=num_samples[0])
     x_env2 = rng.multivariate_normal(
-        mean=env2["means"], cov=np.eye(2)*([sd**2 for sd in env1["sds"]]), size=num_samples[1])
+        mean=env2["means"], cov=np.eye(2)*([sd**2 for sd in env2["sds"]]), size=num_samples[1])
     out = np.concatenate((x_env1, x_env2))
-    target = [int(x2 > 0.5) for x1, x2 in out]
-    rng.shuffle(out)
-    return out, target
+    target = np.asarray([int(x2 > 0.5) for x1, x2 in out])
+    data = np.hstack((out, np.expand_dims(target, axis=1)))
+    rng.shuffle(data)
+    return out[:,0:2], out[:,-1].astype(int)
 
 def scm2(seed, env1: NamedTuple=Environments(means=(0.25, 0.4, 0.1), sds=(0.075, 0.075, 0.075)), 
         env2: NamedTuple=Environments(means=(0.75, 0.6, 0.8), sds=(0.075, 0.075, 0.075)),

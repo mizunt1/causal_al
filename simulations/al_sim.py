@@ -52,10 +52,10 @@ def main(args):
     seed = 3
     torch.manual_seed(seed)
     device = torch.device('cuda')
-    sem = args.sem
+    scm = args.scm
     option = args.option
     plot = args.plot
-    if sem == "sem1":
+    if scm == "scm1":
         data, target, data_test, target_test = scm1_data(option, seed)
         if plot:
             plt.axhline(y=0.5, color='r')
@@ -71,7 +71,7 @@ def main(args):
             plt.show()
         input_size = 2
         lr = 1e-2
-    elif sem == "sem_ac":
+    elif scm == "scm_ac":
         data, target, data_test, target_test = scm_ac_data(option)
 
     # MODEL SETUP
@@ -82,7 +82,7 @@ def main(args):
 
     train(1000, model, data, target, 1e-2, device)
 
-    test_accuracy = test(model, data_test, target_test)
+    test_accuracy = test(model, data_test, target_test, device)
     print('test accuracy: {}'.format(test_accuracy))
 
 if __name__ == '__main__':
@@ -90,3 +90,5 @@ if __name__ == '__main__':
     parser.add_argument('--scm', type=str, choices=['scm1', 'scm_ac'])
     parser.add_argument('--option', type=str)
     parser.add_argument('--plot', action='store_true')
+    args = parser.parse_args()
+    main(args)
