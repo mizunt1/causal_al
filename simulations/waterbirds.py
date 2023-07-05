@@ -83,6 +83,7 @@ def test_loop(test_loader, device, model, dataset):
     lbw = 0
     lbw_total_sum = 1e-3
     correct = 0
+    total_data = 0
     for x, y ,meta in test_loader:
         meta_orig = meta
         meta = meta[:,0]
