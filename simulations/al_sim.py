@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import matplotlib.pyplot as plt
 
-from data_gen import scm1_data, scm_ac_data
+from data_gen import scm1_data, scm_ac_data, scm_band_data, scm1_noise_data, entangled_data, entangled_image_data
 
 class Model(nn.Module):
     def __init__(self, input_size):
@@ -46,7 +46,12 @@ def test(model, data, target, device):
     data, target = data.to(device), target.to(device)
     output = model(data)
     accuracy = torch.sum(torch.argmax(output, axis=1) == target) 
-    return accuracy
+    target_0 = output[target==0]
+    t0_acc = torch.sum(torch.argmax(target_0, axis=1) == 0) /len(target_0)
+    target_1 = output[target==1]
+    t1_acc = torch.sum(torch.argmax(target_1, axis=1) == 1) /len(target_1)
+    
+    return accuracy, t0_acc, t1_acc
 
 def main(args):
     seed = 3
@@ -56,9 +61,10 @@ def main(args):
     option = args.option
     plot = args.plot
     input_size = 2        
-
-    if scm == "scm1":
-        data, target, data_test, target_test = scm1_data(option, seed)
+    if scm == "scm_band":
+        data, target, data_test, target_test = scm_band_data(seed)
+    elif scm == "scm1":
+        data, target, data_test, target_test = scm1_data(seed, option)
         if plot:
             plt.axhline(y=0.5, color='r')
             plt.ylabel("causal variable")
@@ -72,23 +78,33 @@ def main(args):
             plt.scatter(data_test[:,0], data_test[:,1])
             plt.show()
         lr = 1e-2
+    elif scm == 'scm_noise':
+        data, target, data_test, target_test = scm1_noise_data(seed)
     elif scm == "scm_ac":
-        data, target, data_test, target_test = scm_ac_data(seed, option)
+        data, target, data_test, target_test = scm_ac_data(seed)
         lr = 1e-2
+    elif scm == 'entangled':
+        data, target, data_test, target_test = entangled_data(seed)
+        input_size = 1
+    elif scm == 'entangled_image':
+        data, target, data_test, target_test = entangled_image_data(seed)
+        input_size = 1
+
     # MODEL SETUP
     model = Model(input_size).to(device)
-    test_accuracy = test(model, data_test, target_test, device)
-    print('test accuracy before training: {}'.format(test_accuracy))
+        
+    test_accuracy, t0_acc, t1_acc = test(model, data_test, target_test, device)
+    print('test accuracy before training: {}, t0 acc: {:.2f}, t1 acc: {:.2f}'.format(test_accuracy, t0_acc, t1_acc))
     log_interval = 1
 
     train(1000, model, data, target, 1e-2, device)
 
-    test_accuracy = test(model, data_test, target_test, device)
-    print('test accuracy: {}'.format(test_accuracy))
+    test_accuracy, t0_acc, t1_acc = test(model, data_test, target_test, device)
+    print('test accuracy: {}, t0 acc: {:.2f}, t1 acc: {:.2f}'.format(test_accuracy, t0_acc, t1_acc))
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--scm', type=str, choices=['scm1', 'scm_ac'])
+    parser.add_argument('--scm', type=str, choices=['scm1', 'scm_ac', 'scm_band', 'scm_noise', 'entangled', 'entangled_image'])
     parser.add_argument('--option', type=str)
     parser.add_argument('--plot', action='store_true')
     args = parser.parse_args()

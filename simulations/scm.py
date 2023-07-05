@@ -18,6 +18,117 @@ def scm1(seed, env1, env2,
     rng.shuffle(data)
     return out[:,0:2], out[:,-1].astype(int)
 
+
+def scm1_noise(seed, env1, env2,
+         num_samples):
+    e1 = 1
+    rng = np.random.default_rng(seed=seed)
+    x1 = [e1 for i in range(num_samples[0])]
+    prop_x1 = env1[0]
+    flipped = rng.choice([0,1], size=num_samples[0], p=[1-prop_x1, prop_x1])
+    x1_flipped = [int(y^1) if z else int(y) for y,z in zip(x1, flipped)]
+    prop_x2 = env1[1]
+    flipped2 = rng.choice([0,1], size =num_samples[0], p=[1-prop_x2, prop_x2])
+
+    x2 = [e1 for i in range(num_samples[0])]
+    x2_flipped = [int(y^1) if z else int(y) for y,z in zip(x2, flipped2)]
+    y = [x> 0.5 for x in x2_flipped]  
+    prop_y = env1[2]
+    flipped = rng.choice([0,1], size = num_samples[0], p=[1-prop_y, prop_y])
+    y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
+    data_e1 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
+ 
+    e2 = 0
+    rng = np.random.default_rng(seed=seed)
+    x1 = [e2 for i in range(num_samples[1])]
+    prop_x1 = env2[0]
+    flipped = rng.choice([0,1], size = num_samples[1], p=[1-prop_x1, prop_x1])
+    x1_flipped = [int(y^1) if z else int(y) for y,z in zip(x1, flipped)]
+    prop_x2 = env2[1]
+    flipped2 = rng.choice([0,1], size = num_samples[1], p=[1-prop_x2, prop_x2])
+
+    x2 = [e2 for i in range(num_samples[1])]
+    x2_flipped = [int(y^1) if z else int(y) for y,z in zip(x2, flipped2)]
+    y = [x> 0.5 for x in x2_flipped]  
+    prop_y = env2[2]
+    flipped = rng.choice([0,1], size=num_samples[1], p=[1-prop_y, prop_y])
+    y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
+    data_e2 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
+    data = np.append(data_e1, data_e2, axis=0)
+    rng.shuffle(data)
+
+def entangled_image(seed, env1, env2,
+         num_samples):
+    rng = np.random.default_rng(seed=seed)
+    x_env1 = rng.multivariate_normal(
+        mean=env1["means"], cov=np.eye(2)*([sd**2 for sd in env1["sds"]]), size=num_samples[0])
+    x_env2 = rng.multivariate_normal(
+        mean=env2["means"], cov=np.eye(2)*([sd**2 for sd in env2["sds"]]), size=num_samples[1])
+    import pdb
+    pdb.set_trace()
+    out = np.concatenate((x_env1, x_env2))
+    target = np.asarray([int(x2 > 0.5) for x1, x2 in out])
+    data = np.hstack((out, np.expand_dims(target, axis=1)))
+    rng.shuffle(data)
+
+    return np.expand_dims(out, 1), target.astype(int)
+
+def entangled(seed, env1, env2,
+         num_samples):
+    e1 = 1
+    rng = np.random.default_rng(seed=seed)
+    x1 = [e1 for i in range(num_samples[0])]
+    prop_x1 = env1[0]
+    flipped = rng.choice([0,1], size=num_samples[0], p=[1-prop_x1, prop_x1])
+    x1_flipped = [int(y^1) if z else int(y) for y,z in zip(x1, flipped)]
+    prop_x2 = env1[1]
+    flipped2 = rng.choice([0,1], size =num_samples[0], p=[1-prop_x2, prop_x2])
+
+    x2 = [e1 for i in range(num_samples[0])]
+    x2_flipped = [int(y^1) if z else int(y) for y,z in zip(x2, flipped2)]
+    y = [x> 0.5 for x in x2_flipped]  
+    prop_y = env1[2]
+    flipped = rng.choice([0,1], size = num_samples[0], p=[1-prop_y, prop_y])
+    y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
+    data_e1 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
+ 
+    e2 = 0
+    rng = np.random.default_rng(seed=seed)
+    x1 = [e2 for i in range(num_samples[1])]
+    prop_x1 = env2[0]
+    flipped = rng.choice([0,1], size = num_samples[1], p=[1-prop_x1, prop_x1])
+    x1_flipped = [int(y^1) if z else int(y) for y,z in zip(x1, flipped)]
+    prop_x2 = env2[1]
+    flipped2 = rng.choice([0,1], size = num_samples[1], p=[1-prop_x2, prop_x2])
+
+    x2 = [e2 for i in range(num_samples[1])]
+    x2_flipped = [int(y^1) if z else int(y) for y,z in zip(x2, flipped2)]
+    y = [x> 0.5 for x in x2_flipped]  
+    prop_y = env2[2]
+    flipped = rng.choice([0,1], size=num_samples[1], p=[1-prop_y, prop_y])
+    y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
+    data_e2 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
+    data = np.append(data_e1, data_e2, axis=0)
+    rng.shuffle(data)
+    out = data[:,0] + data[:,1]
+    
+    target = data[:,-1]
+
+    return np.expand_dims(out, 1), target.astype(int)
+
+def scm_band(seed, env1, env2,
+         num_samples):
+    rng = np.random.default_rng(seed=seed)
+    x_env1 = rng.multivariate_normal(
+        mean=env1["means"], cov=np.eye(2)*([sd**2 for sd in env1["sds"]]), size=num_samples[0])
+    x_env2 = rng.multivariate_normal(
+        mean=env2["means"], cov=np.eye(2)*([sd**2 for sd in env2["sds"]]), size=num_samples[1])
+    out = np.concatenate((x_env1, x_env2))
+    target = np.asarray([int(x2 > 0.5 and x2 < 1.0) for x1, x2 in out])
+    data = np.hstack((out, np.expand_dims(target, axis=1)))
+    rng.shuffle(data)
+    return out[:,0:2], out[:,-1].astype(int)
+
 def scm2(seed, env1: NamedTuple=Environments(means=(0.25, 0.4, 0.1), sds=(0.075, 0.075, 0.075)), 
         env2: NamedTuple=Environments(means=(0.75, 0.6, 0.8), sds=(0.075, 0.075, 0.075)),
         num_samples: Tuple=(100, 100)):
