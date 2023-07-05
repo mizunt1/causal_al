@@ -100,9 +100,9 @@ def test_loop(test_loader, device, model, dataset):
         wbl_total_sum += results[0]['count_y:waterbird_background:land']
         lbw += results[0]['acc_y:landbird_background:water']
         lbw_total_sum += results[0]['count_y:landbird_background:water']
-
+        total_data += len(y)
     print('Test accuracy: {:.4f}'.format(
-        correct/len(test_loader)))
+        correct/total_data))
     print('Test accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
         ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))
     print('Test count for ww: {:.1f}, ll: {:.1f}, wbl: {:.1f}, lbw: {:.1f}'.format(
@@ -193,7 +193,7 @@ def main():
 
                 print('Train accuracy for current epoch. ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
                     ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))        
-                print('Raw count for current epoch. ww: {:n}, ll: {:n}, wbl: {:n}, lbw: {:n}'.format(
+                print('Train count for current epoch. ww: {:n}, ll: {:n}, wbl: {:n}, lbw: {:n}'.format(
                     ww_total_sum, ll_total_sum, wbl_total_sum, lbw_total_sum))        
 
                 test_loop(test_loader, device, model, dataset)
