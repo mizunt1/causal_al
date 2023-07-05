@@ -105,7 +105,7 @@ def test_loop(test_loader, device, model, dataset):
         correct/len(test_loader)))
     print('Test accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
         ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))
-    print('Count for ww: {:.1f}, ll: {:.1f}, wbl: {:.1f}, lbw: {:.1f}'.format(
+    print('Test count for ww: {:.1f}, ll: {:.1f}, wbl: {:.1f}, lbw: {:.1f}'.format(
         ww_total_sum, ll_total_sum, wbl_total_sum, lbw_total_sum))
         
 
