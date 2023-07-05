@@ -92,7 +92,8 @@ def test_loop(test_loader, device, model, dataset):
         correct_batch = torch.argmax(output, axis=1) == y
         correct += correct_batch.sum()
         results = dataset.eval(
-                torch.argmax(output, axis=1).cpu().detach(), y.cpu().detach(),  meta_orig.cpu().detach())
+            torch.argmax(output, axis=1).cpu().detach(),
+            y.cpu().detach(),  meta_orig.cpu().detach())
         ww += results[0]['acc_y:waterbird_background:water']
         ww_total_sum += results[0]['count_y:waterbird_background:water']
         ll += results[0]['acc_y:landbird_background:land']
@@ -102,6 +103,7 @@ def test_loop(test_loader, device, model, dataset):
         lbw += results[0]['acc_y:landbird_background:water']
         lbw_total_sum += results[0]['count_y:landbird_background:water']
         total_data += len(y)
+        
     print('Test accuracy: {:.4f}'.format(
         correct/total_data))
     print('Test accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
@@ -111,7 +113,7 @@ def test_loop(test_loader, device, model, dataset):
         
 
 # Prepare the standard data loader
-@profile
+
 def main():
             
     # Train loop
@@ -180,13 +182,12 @@ def main():
             wbl_total_sum += results[0]['count_y:waterbird_background:land']
             lbw += results[0]['acc_y:landbird_background:water']
             lbw_total_sum += results[0]['count_y:landbird_background:water']
-            
+            correct = torch.argmax(output, axis=1) == y
+            correct = correct.sum()
+            total_correct += correct
+            total_data += len(y)
             if batch_idx %10 == 0:
                 #correct = torch.gt(torch.argmax(output), torch.Tensor([0.0]).to(device)) == y
-                correct = torch.argmax(output, axis=1) == y
-                correct = correct.sum()
-                total_correct += correct
-                total_data += len(y)
                 print('Train Epoch: {} Loss: {:.4f} Train accuracy for batch: {:.4f}'.format(
                 epoch, loss.item(), correct/len(y)))
 
@@ -197,7 +198,7 @@ def main():
                 print('Train count for current epoch. ww: {:n}, ll: {:n}, wbl: {:n}, lbw: {:n}'.format(
                     ww_total_sum, ll_total_sum, wbl_total_sum, lbw_total_sum))        
 
-                test_loop(test_loader, device, model, dataset)
+        test_loop(test_loader, device, model, dataset)
 
 if __name__ == "__main__":
     main()
