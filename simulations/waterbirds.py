@@ -10,6 +10,8 @@ import torch.optim as optim
 
 from matplotlib import pyplot as plt
 torch.manual_seed(0)
+from line_profiler import LineProfiler
+
 normalize = transforms.Normalize(mean=0, std=255)
 class ConvNet(nn.Module):
     def __init__(self):
@@ -69,31 +71,6 @@ def confusion(output, y, meta):
     lbw_total = len(lbw_pred)
     return ww_correct, ww_total, ll_correct, ll_total, wbl_correct, wbl_total, lbw_correct, lbw_total
 
-
-# Load the full dataset, and download it if necessary
-dataset = get_dataset(dataset="waterbirds", download=True)
-
-# Get the training set
-train_data = dataset.get_subset(
-    "train",
-    transform=transforms.Compose(
-        [transforms.Resize((448, 448)), transforms.ToTensor()]
-    ),
-)
-
-# Prepare the standard data loader
-train_loader = get_train_loader("standard", train_data, batch_size=16)
-
-test_data = dataset.get_subset(
-    "test",
-    transform=transforms.Compose(
-        [transforms.Resize((448, 448)), transforms.ToTensor()]
-    ),
-)
-
-# Prepare the standard data loader
-test_loader = get_train_loader("standard", test_data, batch_size=16)
-
 def test_loop(test_loader, device, model):
     ww = 0
     ww_total_sum = 0
@@ -125,54 +102,82 @@ def test_loop(test_loader, device, model):
         correct/len(test_loader)))
     print('test accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
         ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))
-        
-# Train loop
-use_cuda = torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
-model = ConvNet().to(device)
-optimizer = optim.Adam(model.parameters(), lr=0.00001)
-num_epochs = 10
-batch_idx = 0
-ww = 0
-ww_total_sum = 0
-ll = 0
-ll_total_sum = 0
-wbl = 0
-wbl_total_sum = 0
-lbw = 0
-lbw_total_sum = 0
 
-for epoch in range(num_epochs):
-    model.train()
+# Prepare the standard data loader
 
-    for x, y, meta in train_loader:
-        meta = meta[:,0]
-        batch_idx += 1
-        #plt.imshow(x[0][0], interpolation='nearest')
-        #plt.show()
-        x, y, meta = x.to(device), y.to(device), meta.to(device)
-        optimizer.zero_grad()
-        output = model(x)
-        loss = F.cross_entropy(output, y)
-        loss.backward()
-        optimizer.step()
-        # waterbird on water
-        ww_correct, ww_total, ll_correct, ll_total, wbl_correct, wbl_total, lbw_correct, lbw_total = confusion(output, y, meta)
-        ww += ww_correct
-        ww_total_sum += ww_total
-        ll += ll_correct
-        ll_total_sum += ll_total
-        wbl += wbl_correct
-        wbl_total_sum += wbl_total
-        lbw += lbw_correct
-        lbw_total_sum += lbw_total
-        if batch_idx %10 == 0:
-            #correct = torch.gt(torch.argmax(output), torch.Tensor([0.0]).to(device)) == y
-            correct = torch.argmax(output, axis=1) == y
-            correct = correct.sum()
-            print('Train Epoch: {} Loss: {:.4f} Train accuracy: {:.4f}'.format(
-            epoch, loss.item(), correct/len(y)))
+def main():
+            
+    # Train loop
+    # Load the full dataset, and download it if necessary
+    dataset = get_dataset(dataset="waterbirds", download=True)
+    
+    # Get the training set
+    train_data = dataset.get_subset(
+        "train",
+        transform=transforms.Compose(
+            [transforms.Resize((448, 448)), transforms.ToTensor()]
+        ),
+    )
+    
+    # Prepare the standard data loader
+    train_loader = get_train_loader("standard", train_data, batch_size=16)
+    
+    test_data = dataset.get_subset(
+        "test",
+        transform=transforms.Compose(
+            [transforms.Resize((448, 448)), transforms.ToTensor()]
+        ),
+    )
+    test_loader = get_train_loader("standard", test_data, batch_size=16)
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    model = ConvNet().to(device)
+    optimizer = optim.Adam(model.parameters(), lr=0.00001)
+    num_epochs = 1
+    batch_idx = 0
+    ww = 0
+    ww_total_sum = 0
+    ll = 0
+    ll_total_sum = 0
+    wbl = 0
+    wbl_total_sum = 0
+    lbw = 0
+    lbw_total_sum = 0
 
-            print('Train accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
-                ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))        
-            test_loop(test_loader, device, model)
+    for epoch in range(num_epochs):
+        model.train()
+
+        for x, y, meta in train_loader:
+            meta = meta[:,0]
+            batch_idx += 1
+            #plt.imshow(x[0][0], interpolation='nearest')
+            #plt.show()
+            x, y, meta = x.to(device), y.to(device), meta.to(device)
+            optimizer.zero_grad()
+            output = model(x)
+            loss = F.cross_entropy(output, y)
+            loss.backward()
+            optimizer.step()
+            # waterbird on water
+            ww_correct, ww_total, ll_correct, ll_total, wbl_correct, wbl_total, lbw_correct, lbw_total = confusion(output, y, meta)
+            ww += ww_correct
+            ww_total_sum += ww_total
+            ll += ll_correct
+            ll_total_sum += ll_total
+            wbl += wbl_correct
+            wbl_total_sum += wbl_total
+            lbw += lbw_correct
+            lbw_total_sum += lbw_total
+            if batch_idx %10 == 0:
+                #correct = torch.gt(torch.argmax(output), torch.Tensor([0.0]).to(device)) == y
+                correct = torch.argmax(output, axis=1) == y
+                correct = correct.sum()
+                print('Train Epoch: {} Loss: {:.4f} Train accuracy: {:.4f}'.format(
+                epoch, loss.item(), correct/len(y)))
+
+                print('Train accuracy for ww: {:.3f}, ll: {:.3f}, wbl: {:.3f}, lbw: {:.3f}'.format(
+                    ww/ww_total_sum, ll/ll_total_sum, wbl/wbl_total_sum, lbw/lbw_total_sum))        
+                test_loop(test_loader, device, model)
+
+if __name__ == "__main__":
+    main()
