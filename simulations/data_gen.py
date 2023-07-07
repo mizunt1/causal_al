@@ -18,7 +18,7 @@ def scm_band_data(seed):
 def scm1_noise_data(seed):
     data, target = scm1_noise(seed, (0.1, 0.1, 0.1), (0.1, 0.1, 0.1), (100, 100))
     data, target = torch.tensor(data).to(torch.float), torch.tensor(target)
-    data_test, target_test = scm1_noise(seed+1, (0.4, 0.1, 0.1), (0.4, 0.1, 0.1), (100, 100))
+    data_test, target_test = scm1_noise(seed+1, (0.5, 0.5, 0.0), (0.5, 0.5, 0.1), (100, 100))
     data_test, target_test = torch.tensor(data_test).to(torch.float), torch.tensor(target_test)
     return data, target, data_test, target_test
 
