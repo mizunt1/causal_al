@@ -9,7 +9,8 @@ class CC:
     """
     def __init__(self, dim_inv, dim_spu, n_envs, non_lin=False):
         self.scramble = torch.eye(dim_inv + dim_spu)
-        self.scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu)/2)), torch.nn.ReLU())
+        self.scramble_non_lin = torch.nn.Sequential(
+            torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu)/2)), torch.nn.ReLU())
         self.dim_inv = dim_inv
         self.dim_spu = dim_spu
         self.dim = dim_inv + dim_spu
@@ -82,8 +83,8 @@ class CC:
         print("minority env test: ",len(target1_test) )
         data_test = torch.cat((data1_test, data2_test))
         target_test = torch.cat((target1_test, target2_test))
-        return data_train, target_train, data_test, target_test
-        
+        return data_train, target_train, data_test, target_test, minority_data
+    
 
         
 if __name__ == "__main__":
@@ -91,5 +92,3 @@ if __name__ == "__main__":
     
     inputs, outputs = scm.sample()
     inputs2, outputs2 = scm.sample()
-    import pdb
-    pdb.set_trace()
