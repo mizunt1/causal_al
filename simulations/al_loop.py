@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     wandb.init(
-        project='exps',
+        project='causal_al',
         settings=wandb.Settings(start_method='fork')
     )
     wandb.config.update(args)
