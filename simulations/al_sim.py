@@ -91,19 +91,21 @@ def main(args):
         lr = 1e-2
     elif scm == 'entangled':
         data, target, data_test, target_test = entangled_data(seed)
+        target = target.unsqueeze(1).float()
+        target_test = target_test.unsqueeze(1).float()
         input_size = 1
+        lr = 1e-3
     elif scm == 'cow_camel':
-        scm = CC(5,5,6, non_lin=True)
+        scm = CC(5,5,2, non_lin=False)
         
         #data, target = scm.sample()
         #data_test, target_test = scm.sample(split='test')
-        data, target, data_test, target_test = scm.mix_train_test(0.9, 100)
-        input_size = 5
+        data, target, data_test, target_test = scm.mix_train_test(0.5, 100)
+        input_size = 10
         lr = 1e-3
         
     # MODEL SETUP
-    model = Model(input_size).to(device)
-        
+    model = Model(input_size).to(device)        
     test_accuracy = test(model, data_test, target_test, device)
     print('test accuracy before training: {}'.format(test_accuracy))
     log_interval = 1

@@ -18,14 +18,18 @@ def scm_band_data(seed):
 def scm1_noise_data(seed):
     data, target = scm1_noise(seed, (0.1, 0.1, 0.1), (0.1, 0.1, 0.1), (100, 100))
     data, target = torch.tensor(data).to(torch.float), torch.tensor(target)
-    data_test, target_test = scm1_noise(seed+1, (0.5, 0.5, 0.0), (0.5, 0.5, 0.1), (100, 100))
+    data_test, target_test = scm1_noise(seed+1, (0.9, 0.9, 0.0), (0.9, 0.9, 0.1), (100, 100))
     data_test, target_test = torch.tensor(data_test).to(torch.float), torch.tensor(target_test)
     return data, target, data_test, target_test
 
-def entangled_data(seed):
-    data, target = entangled(seed, (0.1, 0.1, 0.1), (0.1, 0.1, 0.1), (100, 100))
+def scramble(dim_inv=1, dim_spu=1):
+    scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
+    return scramble_non_lin
+
+def entangled_data(seed, num_samples, scramble=scramble()):
+    data, target = entangled(seed, (0.9, 0.1, 0.1), (0.1, 0.9, 0.1), (20, 180), scramble)
     data, target = torch.tensor(data).to(torch.float), torch.tensor(target)
-    data_test, target_test = entangled(seed+1, (0.4, 0.1, 0.1), (0.4, 0.1, 0.1), (100, 100))
+    data_test, target_test = entangled(seed+1, (0.1, 0.9, 0.1), (0.9, 0.1, 0.1), (20, 180), scramble)
     data_test, target_test = torch.tensor(data_test).to(torch.float), torch.tensor(target_test)
     return data, target, data_test, target_test
 
@@ -35,6 +39,7 @@ def entangled_image_data(seed):
     data_test, target_test = entangled_image(seed+1, {'means':(0.4, 0.1, 0.1), 'sds':(0.4, 0.1, 0.1)}, (100, 100))
     data_test, target_test = torch.tensor(data_test).to(torch.float), torch.tensor(target_test)
     return data, target, data_test, target_test
+
 
 def scm1_data(seed, option):
     rng = np.random.default_rng(seed)

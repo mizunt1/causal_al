@@ -2,7 +2,11 @@ from typing import NamedTuple, Tuple
 from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
 seed=0
+torch.manual_seed(0)
+
+
 Environments = namedtuple('Environments', ['means', 'sds'])
 
 def scm1(seed, env1, env2,
@@ -71,8 +75,12 @@ def entangled_image(seed, env1, env2,
 
     return np.expand_dims(out, 1), target.astype(int)
 
+def scramble(data, dim_inv=1, dim_spu=1):
+    scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
+    return scramble_non_lin(data)
+
 def entangled(seed, env1, env2,
-         num_samples):
+         num_samples, scramble):
     e1 = 1
     rng = np.random.default_rng(seed=seed)
     x1 = [e1 for i in range(num_samples[0])]
@@ -108,11 +116,11 @@ def entangled(seed, env1, env2,
     data_e2 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
     data = np.append(data_e1, data_e2, axis=0)
     rng.shuffle(data)
-    out = data[:,0] + data[:,1]
-    
+    data = data[:,0:2]
+    out = scramble(torch.FloatTensor(data))
     target = data[:,-1]
 
-    return np.expand_dims(out, 1), target.astype(int)
+    return out, target.astype(int)
 
 def scm_band(seed, env1, env2,
          num_samples):

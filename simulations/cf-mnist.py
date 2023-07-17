@@ -109,14 +109,17 @@ def train(num_epochs, model, dataloader_train, dataloader_test, lr, device,  log
         print('Test Epoch: {} Test accuracy: {:.3f}' .format(
             epoch, acc_test))
 
-def setup_envs(majority_frac_train, majority_frac_test):
-    mnist = datasets.MNIST('~/datasets/mnist', train=True, download=True)
-    mnist_train = (mnist.data[:50000], mnist.targets[:50000])
-    mnist_test = (mnist.data[50000:], mnist.targets[50000:])
+def setup_envs(mnist_data, majority_frac_train, majority_frac_test, train_size=50000, test_size=None):
+    if test_size != None:
+        assert train_size + test_size < len(mnist.targets)
+    if test_size == None:
+        test_size = train_size
+    mnist_train = (mnist.data[:train_size], mnist.targets[:train_size])
+    mnist_test = (mnist.data[test_size:], mnist.targets[test_size:])
     test_len = len(mnist_test[0])
     
-    majority_env_train = int(50000*majority_frac_train)
-    minority_env_train = int(50000-majority_env_train)
+    majority_env_train = int(train_size*majority_frac_train)
+    minority_env_train = int(train_size-majority_env_train)
     majority_env_test = int(test_len*majority_frac_test)
     minority_env_test = int(test_len-majority_env_test)
     
@@ -129,11 +132,11 @@ def setup_envs(majority_frac_train, majority_frac_test):
     majority_test_data = (mnist_test[0][:majority_env_test], mnist_test[1][:majority_env_test])
     minority_test_data = (mnist_test[0][majority_env_test:], mnist_test[1][majority_env_test:])
 
-    data_env1_train, labels_env1_train = cf_mnist(0, majority_train_data[0], majority_train_data[1], colour_flip=0.01, label_flip=0.1)
-    data_env0_train, labels_env0_train = cf_mnist(0, minority_train_data[0], minority_train_data[1], colour_flip=0.9, label_flip=0.1)
+    data_env1_train, labels_env1_train = cf_mnist(0, majority_train_data[0], majority_train_data[1], colour_flip=0.9, label_flip=0.1)
+    data_env0_train, labels_env0_train = cf_mnist(0, minority_train_data[0], minority_train_data[1], colour_flip=0.1, label_flip=0.1)
 
-    data_env1_test, labels_env1_test = cf_mnist(0, minority_test_data[0], minority_test_data[1], colour_flip=0.01, label_flip=0.1)
-    data_env0_test, labels_env0_test = cf_mnist(0, majority_test_data[0], majority_test_data[1], colour_flip=0.9, label_flip=0.1)
+    data_env1_test, labels_env1_test = cf_mnist(0, minority_test_data[0], minority_test_data[1], colour_flip=0.9, label_flip=0.1)
+    data_env0_test, labels_env0_test = cf_mnist(0, majority_test_data[0], majority_test_data[1], colour_flip=0.1, label_flip=0.1)
     
     data_train = torch.cat((data_env1_train, data_env0_train))
     labels_train = torch.cat((labels_env1_train, labels_env0_train))
@@ -148,9 +151,10 @@ def setup_envs(majority_frac_train, majority_frac_test):
     return dataloader_train, dataloader_test
 
 if __name__ == "__main__":
-    majority_frac_train = 0.80
+    majority_frac_train = 0.99
     majority_frac_test = 0.5
-    dataloader_train, dataloader_test = setup_envs(majority_frac_train, majority_frac_test)
+    mnist = datasets.MNIST('~/datasets/mnist', train=True, download=True)
+    dataloader_train, dataloader_test = setup_envs(mnist, majority_frac_train, majority_frac_test)#, train_size=10000)
     device = torch.device('cuda')
     hidden_dim = 256
     model = MLP(hidden_dim).to(device)

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import math
 
-torch.manual_seed(3)
+
 class CC:
     """
     Cows and camels
@@ -20,8 +20,8 @@ class CC:
 
         if n_envs >= 2:
             self.envs = {
-                'E0': {"p": 0.95, "s": 0.3},
-                'E1': {"p": 0.97, "s": 0.5}
+                'E0': {"p": 0.97, "s": 0.3},
+                'E1': {"p": 0.99, "s": 0.5}
             }
         if n_envs >= 3:
             self.envs["E2"] = {"p": 0.99, "s": 0.7}
@@ -33,8 +33,8 @@ class CC:
                 }
         print("Environments variables:", self.envs)
 
-        # foreground is 100x noisier than background
-        self.snr_fg = 1e-2
+        # foreground is 1000x noisier than background
+        self.snr_fg = 1e-4
         self.snr_bg = 1
 
         # foreground (fg) denotes animal (cow / camel)
@@ -55,11 +55,9 @@ class CC:
                 math.sqrt(10) + self.avg_fg[i]) * self.snr_fg,
             (torch.randn(n, self.dim_spu) /
                 math.sqrt(10) + self.avg_bg[i]) * self.snr_bg), -1)
-
         if split == "test":
             # for test, the spurrious features are somehow mixed around, so unrelated to correlated features
             x[:, self.dim_spu:] = x[torch.randperm(len(x)), self.dim_spu:]
-
         inputs = x @ self.scramble
         outputs = x[:, :self.dim_inv].sum(1, keepdim=True).gt(0).float()
         # inputs are spurious and invariant features scrambled together. ie the image
@@ -71,8 +69,8 @@ class CC:
     def mix_train_test(self, proportion, total_samples, no_confounding_test=False):
         majority_data = int(np.floor(total_samples*proportion))
         minority_data = total_samples - majority_data
-        data2, target2 = self.sample(n=minority_data, split='test')
-        data1, target1 = self.sample(n=majority_data)
+        data1, target1 = self.sample(n=majority_data) # majority data in train is correlated
+        data2, target2 = self.sample(n=minority_data, split='test') # minority is random
         print("minority env train: ",len(target2) )
         data_train = torch.cat((data1, data2))
         target_train = torch.cat((target1, target2))
