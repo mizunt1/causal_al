@@ -35,7 +35,7 @@ class CC:
         print("Environments variables:", self.envs)
 
         # foreground is 1000x noisier than background
-        self.snr_fg = 1e-4
+        self.snr_fg = 1e-2
         self.snr_bg = 1
 
         # foreground (fg) denotes animal (cow / camel)

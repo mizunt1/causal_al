@@ -8,8 +8,6 @@ import random
 import wandb
 
 from data_gen import scm1_data, scm_ac_data, scm_band_data, scm1_noise_data, entangled_data, entangled_image_data
-torch.manual_seed(0)
-random.seed(0)
 
 class ModelEnsemble(nn.Module):
     def __init__(self, input_size, num_models):
@@ -66,7 +64,6 @@ def train(num_epochs, model, data, target, lr, device,  log_interval=1000, ensem
     optimizer = optim.Adam(model.parameters(), lr=lr)
     #data,target = torch.stack(data), torch.stack(target)
     #data, target = data.to(device), target.to(device)
-
     for epoch in range(num_epochs):
         #data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -78,18 +75,19 @@ def train(num_epochs, model, data, target, lr, device,  log_interval=1000, ensem
         loss.backward()
         optimizer.step()
 
+
+        preds = torch.argmax(output, axis=1)
+        if ensemble:
+            num_models = preds.shape
+        else:
+            num_models = 1
+        num_correct = ((preds - target).abs() < 1e-2).float().sum()
+        correct = num_correct / (len(target)*num_models)
         if epoch % log_interval == 0:
-            preds = torch.argmax(output, axis=1)
-            if ensemble:
-                num_models = preds.shape
-            else:
-                num_models = 1
-            num_correct = ((preds - target).abs() < 1e-2).float().sum()
-            correct = num_correct / (len(target)*num_models)
-            # accuracy = torch.sum(torch.argmax(output, axis=1) == torch.arxmax(target, axis=1)) /len(output)
+
             print('Train Epoch: {} Loss: {:.3f} Train correct: {:.3f}' .format(
-                epoch, loss.item(), correct/(len(target)*num_models)))
-        return correct
+                epoch, loss.item(), correct))
+    return correct
 
 def test(model, data, target, device, ensemble):
     #data, target = data.to(device), target.to(device)
@@ -134,6 +132,8 @@ def entropy(preds, n_largest, train_indices, prop):
 def al_loop(models, data, target, data_test, target_test,
             n_largest, al_iters, lr, num_epochs, device, majority_data,
             log_int = 1000, random_ac=False):
+    mean_score_min = 0
+    mean_score_maj = 0
     assert(al_iters*n_largest < len(data))
     pool_indices = [1 for i in range(len(data))]
     train_indices = [0 for i in range(len(data))]
@@ -184,9 +184,9 @@ if __name__ == "__main__":
     parser.add_argument('--standard_train', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--data_size', type=int, default=200)
-    parser.add_argument('--n_largest', type=int, default=10)
-    parser.add_argument('--al_iters', type=int, default=2)
-    parser.add_argument('--proportion', type=float, default=0.90)
+    parser.add_argument('--n_largest', type=int, default=2)
+    parser.add_argument('--al_iters', type=int, default=10)
+    parser.add_argument('--proportion', type=float, default=0.50)
 
     args = parser.parse_args()
     wandb.init(
