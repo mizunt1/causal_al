@@ -182,6 +182,7 @@ if __name__ == "__main__":
     parser.add_argument('--random', action='store_true')
     parser.add_argument('--no_confound_test', action='store_true')
     parser.add_argument('--standard_train', action='store_true')
+    parser.add_argument('--non_lin_entangle', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--data_size', type=int, default=200)
     parser.add_argument('--n_largest', type=int, default=2)
@@ -190,7 +191,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     wandb.init(
-        project='causal_al',
+        project='causal_al_r2',
         settings=wandb.Settings(start_method='fork')
     )
     wandb.config.update(args)
@@ -205,7 +206,7 @@ if __name__ == "__main__":
     n_largest = args.n_largest
     al_iters = args.al_iters
     lr = 1e-2
-    non_lin = False
+    non_lin = args.non_lin_entangle
     seed = 0
     entangled = False
     cc = True
