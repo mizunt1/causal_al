@@ -243,7 +243,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_epochs', type=int, default=3010)
 
     args = parser.parse_args()
-    wandb.init(
+    run = wandb.init(
         project='causal_al_r2',
         settings=wandb.Settings(start_method='fork')
     )
@@ -324,7 +324,7 @@ if __name__ == "__main__":
     else:
         train_acc, test_acc, prop_maj, prop_minority, data_train, data_pool, mean_score_maj, mean_score_min = al_loop(
             models, data, target, data_test, target_test, n_largest, al_iters, lr, num_epochs, device,
-            args.proportion, wandb, random_ac=rand_ac)
+            args.proportion, run, random_ac=rand_ac)
         print("random: ", args.random)
         wandb.run.summary.update({"test acc": test_acc,
                                   "train_acc": train_acc,
