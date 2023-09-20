@@ -24,7 +24,13 @@ def scm1(seed, env1, env2,
 
 
 def scm1_noise(seed, env1, env2,
-         num_samples):
+         num_samples, entangle=False):
+    # env1[0] proportion of x1 to flip
+    # env1[1] proportion of x2 to flip
+    # env1[2] proportion of y to flip
+    # there is a causal link between y and x2
+    # x1 and x2 are confounded by e1
+    # x1, x2 and y are all 0s or 1s
     e1 = 1
     rng = np.random.default_rng(seed=seed)
     x1 = [e1 for i in range(num_samples[0])]
@@ -41,9 +47,9 @@ def scm1_noise(seed, env1, env2,
     y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
     data_e1 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
  
-    e2 = 0
+    e2 = 1
     rng = np.random.default_rng(seed=seed)
-    x1 = [e2 for i in range(num_samples[1])]
+    x1 = [0 for i in range(num_samples[1])]
     prop_x1 = env2[0]
     flipped = rng.choice([0,1], size = num_samples[1], p=[1-prop_x1, prop_x1])
     x1_flipped = [int(y^1) if z else int(y) for y,z in zip(x1, flipped)]
@@ -58,8 +64,43 @@ def scm1_noise(seed, env1, env2,
     y_flipped = [int(y^1) if z else int(y) for y,z in zip(y, flipped)]
     data_e2 = np.hstack((np.expand_dims(x1_flipped, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(y_flipped, axis=1)))
     data = np.append(data_e1, data_e2, axis=0)
-    rng.shuffle(data)
-    return data[:,0:2], data[:,-1]
+    if entangle:
+        data_input = scramble(torch.FloatTensor(data[:, 0:2]))
+        
+    else:
+        data_input = data[:, 0:2]
+    return torch.tensor(data_input).to(torch.float), torch.tensor(data[:,-1].astype(int))
+
+def scm_continuous_confounding(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01):
+    # in environment e1, x1 and x2 is correlated
+    # in environment e2 the mean is flipped for sampling x1s.
+    rng = np.random.default_rng(seed)
+    num_samples_env1 = int(np.ceil(prop_1*num_samples))
+    num_samples_env2 = num_samples - num_samples_env1
+    e1 = 1
+    means = rng.normal(0, 1, size=num_samples_env1)
+    x1 = rng.normal(means, [0.5 for i in range(len(means))])
+    x2 = rng.normal(means, [0.5 for i in range(len(means))])
+    target_e1 = np.asarray([int(x2_val > 0) for x2_val in x2])
+    flipped = rng.choice([0,1], size =num_samples_env1, p=[1-flip_y, flip_y])
+    y_flipped_e1 = [int(y^1) if z else int(y) for y,z in zip(target_e1, flipped)]
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+
+    e2 = -1
+    means = rng.normal(0, 1, size=num_samples_env2)
+    x1 = rng.normal(means, [1 for i in range(len(means))])
+    x2 = rng.normal(e2*means, [1 for i in range(len(means))])
+    
+    target_e2 = np.asarray([int(x2_val > 0) for x2_val in x2])
+    data_input_e2 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+                            
+    flipped = rng.choice([0,1], size =num_samples_env2, p=[1-flip_y, flip_y])
+    y_flipped_e2 = [int(y^1) if z else int(y) for y,z in zip(target_e2, flipped)]
+    data_input = np.append(data_input_e1, data_input_e2, axis=0)
+    data_output = np.append(y_flipped_e1, y_flipped_e2)
+    if entangle:
+        data_input = scramble(torch.FloatTensor(data_input))
+    return torch.tensor(data_input).to(torch.float), torch.tensor(data_output.astype(int))
 
 def entangled_image(seed, env1, env2,
          num_samples):
@@ -76,6 +117,7 @@ def entangled_image(seed, env1, env2,
     return np.expand_dims(out, 1), target.astype(int)
 
 def scramble(data, dim_inv=1, dim_spu=1):
+    torch.manual_seed(2)
     scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
     return scramble_non_lin(data)
 
@@ -152,6 +194,10 @@ def scm2(seed, env1: NamedTuple=Environments(means=(0.25, 0.4, 0.1), sds=(0.075,
 def scm_ac(seed:int, env1: Tuple=(0.25, 0.20),
            env2: Tuple=(0.20, 0.25),
            prop_1 = 0.2, num_samples=200):
+    # env1[0] is the proportion to flip y
+    # env1[1] is the proportion to slip x2
+    # x1 is causally linked to y and is sampled from a random normal
+    # no confounding
     rng = np.random.default_rng(seed)
     num_samples_env1 = int(np.ceil(prop_1*num_samples))
     x1 = rng.normal(
@@ -160,9 +206,9 @@ def scm_ac(seed:int, env1: Tuple=(0.25, 0.20),
     proportion_flip = env1[0]
     flipped = rng.choice([0,1], size = len(target), p=[1-proportion_flip, proportion_flip])
     target_flipped = [int(y^1) if z else int(y) for y,z in zip(target, flipped)]
-    target =target_flipped
-    proportion = env1[1]
+    target = target_flipped
 
+    proportion = env1[1]
     to_flip = rng.choice([0,1], size = len(target), p=[1-proportion, proportion])
     x2_flipped = [int(y^1) if z else int(y) for y,z in zip(target, to_flip)]
 
@@ -182,7 +228,7 @@ def scm_ac(seed:int, env1: Tuple=(0.25, 0.20),
     data_env2 = np.hstack((np.expand_dims(x1_env2, axis=1), np.expand_dims(x2_flipped, axis=1), np.expand_dims(target, axis=1)))
     data_combined = np.append(data_env1, data_env2, axis=0)
     rng.shuffle(data_combined)    
-    return data_combined[:,0:2], (data_combined[:,-1]).astype(int)
+    return torch.tensor(data_combined[:,0:2]).to(torch.float), torch.tensor(data_combined[:,-1].astype(int))
 
 if __name__ == '__main__':
     sd = 0.075
