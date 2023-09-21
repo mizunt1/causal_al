@@ -8,7 +8,7 @@ import random
 import wandb
 
 from data_gen import scm1_data, scm_ac_data, scm_band_data, scm1_noise_data, entangled_data, entangled_image_data
-from scm import scm1_noise, scm_continuous_confounding
+from scm import scm1_noise, scm_confounding_random, scm_continuous_confounding
 
 class ModelEnsemble(nn.Module):
     def __init__(self, input_size, num_models):
@@ -237,6 +237,7 @@ if __name__ == "__main__":
     parser.add_argument('--scm_ac', action='store_true')
     parser.add_argument('--standard_train', action='store_true')
     parser.add_argument('--non_lin_entangle', action='store_true')
+    parser.add_argument('--rand_data', action='store_true')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--data_size', type=int, default=200)
     parser.add_argument('--n_largest', type=int, default=2)
@@ -299,6 +300,13 @@ if __name__ == "__main__":
         data_test, target_test = scm_continuous_confounding(
             seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
         input_size = 2
+    if args.rand_data:
+        data, target = scm_confounding_random(
+            seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+        data_test, target_test = scm_confounding_random(
+            seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+        input_size = 2
+
     lr = 1e-3
     standard_train = args.standard_train
     ensemble = False

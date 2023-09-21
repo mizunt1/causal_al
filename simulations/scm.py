@@ -90,6 +90,38 @@ def scm_continuous_confounding(seed, prop_1=0.2, num_samples=200, entangle=False
     means = rng.normal(0, 1, size=num_samples_env2)
     x1 = rng.normal(means, [1 for i in range(len(means))])
     x2 = rng.normal(e2*means, [1 for i in range(len(means))])
+    target_e2 = np.asarray([int(x2_val > 0) for x2_val in x2])
+    data_input_e2 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+                            
+    flipped = rng.choice([0,1], size =num_samples_env2, p=[1-flip_y, flip_y])
+    y_flipped_e2 = [int(y^1) if z else int(y) for y,z in zip(target_e2, flipped)]
+    data_input = np.append(data_input_e1, data_input_e2, axis=0)
+    data_output = np.append(y_flipped_e1, y_flipped_e2)
+    if entangle:
+        data_input = scramble(torch.FloatTensor(data_input))
+    return torch.tensor(data_input).to(torch.float), torch.tensor(data_output.astype(int))
+
+def scm_confounding_random(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01):
+    # in environment e1, x1 and x2 is correlated
+    # in environment e2 the mean is flipped for sampling x1s.
+    rng = np.random.default_rng(seed)
+    num_samples_env1 = int(np.ceil(prop_1*num_samples))
+    num_samples_env2 = num_samples - num_samples_env1
+    e1 = 1
+    means = rng.normal(0, 1, size=num_samples_env1)
+    x1 = rng.normal(means, [0.5 for i in range(len(means))])
+    x2 = rng.normal(means, [0.5 for i in range(len(means))])
+    target_e1 = np.asarray([int(x2_val > 0) for x2_val in x2])
+    flipped = rng.choice([0,1], size =num_samples_env1, p=[1-flip_y, flip_y])
+    y_flipped_e1 = [int(y^1) if z else int(y) for y,z in zip(target_e1, flipped)]
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+    e2 = -1
+    
+    means_e2 = rng.normal(0, 1, num_samples_env2)
+    means_unrelated = rng.normal(0,1, size=num_samples_env2)
+    x1 = rng.normal(means_unrelated, [1 for i in range(len(means_unrelated))])
+
+    x2 = rng.normal(means_e2, [1 for i in range(len(means_unrelated))])
     
     target_e2 = np.asarray([int(x2_val > 0) for x2_val in x2])
     data_input_e2 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
@@ -101,6 +133,8 @@ def scm_continuous_confounding(seed, prop_1=0.2, num_samples=200, entangle=False
     if entangle:
         data_input = scramble(torch.FloatTensor(data_input))
     return torch.tensor(data_input).to(torch.float), torch.tensor(data_output.astype(int))
+
+
 
 def entangled_image(seed, env1, env2,
          num_samples):
