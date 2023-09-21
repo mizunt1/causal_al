@@ -217,14 +217,14 @@ def al_loop(models, data, target, data_test, target_test,
         print('Al iter: {} points in train set: {}'.format(iter, data_train.shape[0]))
         print('Al iter: {} points in pool set: {}'.format(iter, data_pool.shape[0]))
     print('final train size {}'.format(data_train.shape[0]))
-    prop_minority = np.sum(
+    prop_maj = np.sum(
         np.where(np.asarray(train_indices) == 1)[0]<majority_data)/len(
             np.where(np.asarray(train_indices) ==1)[0])
-    print('prop minority selected for train: {}'.format(prop_minority))
-    prop_maj = np.sum(
+    prop_minority = np.sum(
             np.where(np.asarray(train_indices) == 1)[0]>majority_data)/len(
             np.where(np.asarray(train_indices) ==1)[0])
     print('prop majority selected for train: {}'.format(prop_maj))
+    print('prop minority selected for train: {}'.format(prop_minority))
     return train_acc, test_acc, prop_maj, prop_minority, data_train, data_pool, mean_score_maj, mean_score_min
     
 if __name__ == "__main__":
