@@ -167,6 +167,8 @@ def calc_score_debug(preds):
 def al_loop(models, data, target, data_test, target_test,
             n_largest, al_iters, lr, num_epochs, device, prop, wandb,
             log_int = 1000, random_ac=False):
+    majority_data = int(np.floor(data.shape[0]*prop))
+    minority_data = data.shape[0] - majority_data
     mean_score_min = 0
     mean_score_maj = 0
     assert(al_iters*n_largest < len(data))
