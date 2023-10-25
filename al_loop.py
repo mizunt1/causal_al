@@ -86,7 +86,8 @@ if __name__ == "__main__":
     parser.add_argument('--data', choices=['rand_corr', 'anti_corr','same'], default='anti_corr')
     parser.add_argument('--score', choices=['mi', 'ent'], default='ent')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--data_size', type=int, default=200)
+    parser.add_argument('--pool_size', type=int, default=2000)
+    parser.add_argument('--test_size', type=int, default=200)
     parser.add_argument('--n_largest', type=int, default=2)
     parser.add_argument('--al_iters', type=int, default=4) 
     parser.add_argument('--num_models', type=int, default=10) 
@@ -109,19 +110,19 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.data == 'anti_corr':
         data, target = scm_anti_corr(
-            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size, device=device)
+            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.pool_size, device=device)
         data_test, target_test = scm_anti_corr(
-            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size, device=device)
+            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.test_size, device=device)
     if args.data == 'rand_corr':
         data, target = scm_rand_corr(
-            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.pool_size)
         data_test, target_test = scm_rand_corr(
-            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.test_size)
     if args.data == 'same':
         data, target = scm_same(
-            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+            args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.pool_size)
         data_test, target_test = scm_same(
-            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size)
+            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.test_size)
     input_size = 2
     #data, target = scm.sample(split='train')
     #data_test, target_test = scm.sample(split='test')
