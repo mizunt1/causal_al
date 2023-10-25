@@ -140,10 +140,13 @@ if __name__ == "__main__":
             args.n_largest, args.al_iters, args.lr, args.num_epochs, device,
             args.proportion, run, args.score, random_ac=args.rand_ac)
     if args.plot:
-        plotting_function(data, target, data_test,
-                          target_test,  data_train,
-                          target_train,  models)
-    print("random: ", args.rand_ac)
+
+        plt = plotting_function(data, target, data_test,
+                                target_test,  data_train,
+                                target_train,  models)
+        image = wandb.Image(plt)
+        wandb.log({"fig": image})
+        print("random: ", args.rand_ac)
     wandb.run.summary.update({"test acc": test_acc,
                               "train_acc": train_acc,
                               "mean score majority env": mean_score_maj,

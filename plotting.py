@@ -39,4 +39,4 @@ def plotting_function(data, target, data_test,
         ax.label_outer()
 
     plt.show()
-
+    return fig
