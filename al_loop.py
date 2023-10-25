@@ -126,8 +126,8 @@ if __name__ == "__main__":
     input_size = 2
     #data, target = scm.sample(split='train')
     #data_test, target_test = scm.sample(split='test')
-    majority_data = int(np.floor(args.data_size*args.proportion))
-    minority_data = args.data_size - majority_data
+    majority_data = int(np.floor(args.pool_size*args.proportion))
+    minority_data = args.pool_size - majority_data
     models = Model(input_size, args.num_models)
     models.to(device)
     if args.standard_train:
