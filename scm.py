@@ -13,6 +13,35 @@ def scramble(data, dim_inv=1, dim_spu=1):
     scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
     return scramble_non_lin(data)
 
+def scm_f(seed, prop_1, num_samples, device):
+    rng = np.random.default_rng(seed)
+    if prop_1 >1:
+        num_samples_env1 = int(prop_1)
+        num_samples_env2 = int(num_samples - prop_1)
+    else:
+        num_samples_env1 = int(np.ceil(prop_1*num_samples))
+        num_samples_env2 = num_samples - num_samples_env1
+
+    env1 = 0.8
+    u_1 = rng.choice([1, -1], size=num_samples_env1, p=[env1, 1-env1])
+    x2_1 = rng.normal(u_1, 1)
+    x1_1 = rng.normal(0, [1 for i in range(num_samples_env1)])
+    y_1 = rng.normal(u_1*x1_1, 1)
+    data_input_e1 = np.hstack((np.expand_dims(x1_1, axis=1), np.expand_dims(x2_1, axis=1)))
+
+    env2 = 0.2
+    u_2 = rng.choice([1, -1], size=num_samples_env2, p=[env2, 1-env2])
+    x2_2 = rng.normal(u_2, 1)
+    x1_2 = rng.normal(0, [1 for i in range(num_samples_env2)])
+    y_2 = rng.normal(u_2*x1_2, 1)
+    data_input_e2 = np.hstack((np.expand_dims(x1_2, axis=1), np.expand_dims(x2_2, axis=1)))
+    data_input = np.append(data_input_e1, data_input_e2, axis=0)
+
+    target_e1 = np.asarray([int(y_1val > 0) for y_1val in y_1])
+    target_e2 = np.asarray([int(y_2val > 0) for y_2val in y_2])
+    data_output = np.append(target_e1, target_e2)
+    return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
+
 def scm_anti_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01, device='cuda'):
     # in environment e1, x1 and x2 is correlated
     # in environment e2 the mean is flipped for sampling x1s.

@@ -41,7 +41,7 @@ def train(num_epochs, model, data, target, lr, device,  log_interval=2000, ensem
         correct = num_correct / (len(target)*num_models)
         if epoch % log_interval == 0:
 
-            print('Train Epoch: {} Loss: {:.3f} Train correct: {:.3f}' .format(
+            print('Train Epoch classifier: {} Loss: {:.3f} Train correct: {:.3f}' .format(
                 epoch, loss.item(), correct))
     return correct
 

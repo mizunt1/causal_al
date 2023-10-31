@@ -1,13 +1,10 @@
 import numpy as np
-import torch.nn.functional as F
 import torch 
-import random
 import wandb
 
 from scm import scm_rand_corr, scm_anti_corr, scm_same
-from scores import calc_score
 from models.drop_out_model import Model, train, test
-from plotting import plotting_function
+from plotting import plotting_function, plotting_uncertainties
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
@@ -35,7 +32,7 @@ if __name__ == "__main__":
         data, target = scm_anti_corr(
             args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_train, device=device)
         data_test, target_test = scm_anti_corr(
-            args.seed+1, prop_1=(0.5), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_test, device=device)
+            args.seed+1, prop_1=(1-args.proportion), entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_test, device=device)
     if args.data == 'rand_corr':
         data, target = scm_rand_corr(
             args.seed, prop_1=args.proportion, entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_train)
@@ -61,3 +58,5 @@ if __name__ == "__main__":
     plotting_function(data, target, data_test,
                       target_test,  data,
                       target,  models)
+    plt_unc = plotting_uncertainties(data, data, data_test, models, 'ent')
+
