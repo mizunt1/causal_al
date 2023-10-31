@@ -212,6 +212,7 @@ if __name__ == "__main__":
     models = Model(input_size, args.num_models)
     models.to(device)
     if args.standard_train:
+        print("standard train trains with all of the pool data labelled")
         train_acc = train(args.num_epochs, models, data, target, args.lr, device, ensemble=False)
         test_acc = test(models, data_test, target_test, device, ensemble=False)
         print('test accuracy: {}'.format(test_acc))
