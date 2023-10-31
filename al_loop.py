@@ -67,11 +67,11 @@ def al_loop_reg(models, model_reg, data, target, data_test, target_test,
         print('Al iter: {} test accuracy: {}'.format(iter, test_acc))
         print('Al iter: {} points in train set: {}'.format(iter, data_train.shape[0]))
         print('Al iter: {} points in pool set: {}'.format(iter, data_pool.shape[0]))
-        train_acc = train_reg(
+        train_acc_reg = train_reg(
             num_epochs, model_reg, data_train[:,0].unsqueeze(1), data_train[:,1].unsqueeze(1),
             lr, device, log_interval=log_int)
-        test_acc = test_reg(model_reg, data_test[:,0].unsqueeze(1), data_test[:,1].unsqueeze(1), device)
-        print('reg model: Al iter: {} train accuracy: {}'.format(iter, train_acc))
+        test_acc_reg = test_reg(model_reg, data_test[:,0].unsqueeze(1), data_test[:,1].unsqueeze(1), device)
+        print('reg model: Al iter: {} train accuracy: {}'.format(iter, train_acc_reg))
         print('reg model: Al iter: {} points in train set: {}'.format(iter, data_train.shape[0]))
         print('reg model: Al iter: {} points in pool set: {}'.format(iter, data_pool.shape[0]))
         
