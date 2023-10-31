@@ -216,6 +216,9 @@ if __name__ == "__main__":
         train_acc = train(args.num_epochs, models, data, target, args.lr, device, ensemble=False)
         test_acc = test(models, data_test, target_test, device, ensemble=False)
         print('test accuracy: {}'.format(test_acc))
+        mean_score_min = 0
+        mean_score_maj = 0
+
     else:
         if args.score == 'reg':
             input_size_reg = 1
@@ -244,12 +247,17 @@ if __name__ == "__main__":
         wandb.log({"fig": image})
         plt_unc = plotting_uncertainties(data, data_train, data_test, models, args.score)
         print("random: ", args.rand_ac)
-    wandb.run.summary.update({"test acc": test_acc,
-                              "train_acc": train_acc,
-                              "mean score majority env": mean_score_maj,
-                              "mean score minority env": mean_score_min,
-                              "points in train set": data_train.shape[0],
-                              "points in pool set": data_pool.shape[0],
-                              "prop minority selected for train": prop_minority,
+    if not args.standard_train:
+        wandb.run.summary.update({"test acc": test_acc,
+                                  "train_acc": train_acc,
+                                  "mean score majority env": mean_score_maj,
+                                  "mean score minority env": mean_score_min,
+                                  "points in train set": data_train.shape[0],
+                                  "points in pool set": data_pool.shape[0],
+                                  "prop minority selected for train": prop_minority,
                               "prop majority selected for train": prop_maj,
-                              "minority data size":minority_data})
+                                "minority data size":minority_data})
+    else:
+        wandb.run.summary.update({"test acc": test_acc,
+                                  "train_acc": train_acc})
+                                          
