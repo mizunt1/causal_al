@@ -8,16 +8,53 @@ torch.manual_seed(0)
 
 
 Environments = namedtuple('Environments', ['means', 'sds'])
+
 def scramble(data, dim_inv=1, dim_spu=1):
     torch.manual_seed(2)
-    scramble_non_lin = torch.nn.Sequential(torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
+    scramble_non_lin = torch.nn.Sequential(
+        torch.nn.Linear((dim_inv + dim_spu), int((dim_inv + dim_spu))), torch.nn.ReLU())
     return scramble_non_lin(data)
+
+
+def scm_i(seed, prop_1, num_samples, device):
+    rng = np.random.default_rng(seed)
+    # env1 is majority group always. Majority group has lower indices
+    if prop_1 >1:
+        num_samples_env2 = int(prop_1)
+        num_samples_env1 = int(num_samples - prop_1)
+    else:
+        num_samples_env1 = int(np.ceil(prop_1*num_samples))
+        num_samples_env2 = num_samples - num_samples_env1
+    sigma1_e1 = 0.5
+    sigma2_e1 = 0.1
+    # environment one has partially informative causal 
+    means = rng.normal(0, 0.2, size=num_samples_env1)    
+    x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
+    y_step = rng.normal(x2_e1, sigma1_e1)
+    y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1_e1 = rng.normal(y_e1, [sigma2_e1 for i in range(len(means))])
+    
+    sigma1_e2 = 0.1
+    sigma2_e2 = 0.5
+    # environment 2 has fully informative causal feature
+    means = rng.normal(0, 0.2, size=num_samples_env2)    
+    x2_e2 = rng.normal(means, [0.5 for i in range(len(means))])
+    y_step = rng.normal(x2_e2, sigma1_e2)
+    y_e2 = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1_e2 = rng.normal(y_e2, [sigma2_e2 for i in range(len(means))])
+    
+    data_input_e1 = np.hstack((np.expand_dims(x1_e1, axis=1), np.expand_dims(x2_e1, axis=1)))
+    data_input_e2 = np.hstack((np.expand_dims(x1_e2, axis=1), np.expand_dims(x2_e2, axis=1)))
+    data_input = np.append(data_input_e1, data_input_e2, axis=0)
+    data_output = np.append(y_e1, y_e2)
+    return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
+
 
 def scm_f(seed, prop_1, num_samples, device):
     rng = np.random.default_rng(seed)
     if prop_1 >1:
-        num_samples_env1 = int(prop_1)
-        num_samples_env2 = int(num_samples - prop_1)
+        num_samples_env2 = int(prop_1)
+        num_samples_env1 = int(num_samples - prop_1)
     else:
         num_samples_env1 = int(np.ceil(prop_1*num_samples))
         num_samples_env2 = num_samples - num_samples_env1
@@ -47,8 +84,8 @@ def scm_anti_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01
     # in environment e2 the mean is flipped for sampling x1s.
     rng = np.random.default_rng(seed)
     if prop_1 >1:
-        num_samples_env1 = int(prop_1)
-        num_samples_env2 = int(num_samples - prop_1)
+        num_samples_env2 = int(prop_1)
+        num_samples_env1 = int(num_samples - prop_1)
     else:
         num_samples_env1 = int(np.ceil(prop_1*num_samples))
         num_samples_env2 = num_samples - num_samples_env1
@@ -63,8 +100,8 @@ def scm_anti_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01
 
     e2 = -1
     means = rng.normal(0, 1, size=num_samples_env2)
-    x1 = rng.normal(means, [1 for i in range(len(means))])
-    x2 = rng.normal(e2*means, [1 for i in range(len(means))])
+    x1 = rng.normal(means, [0.5 for i in range(len(means))])
+    x2 = rng.normal(e2*means, [0.5 for i in range(len(means))])
     target_e2 = np.asarray([int(x2_val > 0) for x2_val in x2])
     data_input_e2 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
                             
@@ -80,8 +117,8 @@ def scm_rand_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01
     # in environment e1, x1 and x2 is correlated
     rng = np.random.default_rng(seed)
     if prop_1 >1:
-        num_samples_env1 = int(prop_1)
-        num_samples_env2 = int(num_samples - prop_1)
+        num_samples_env2 = int(prop_1)
+        num_samples_env1 = int(num_samples - prop_1)
     else:
         num_samples_env1 = int(np.ceil(prop_1*num_samples))
         num_samples_env2 = num_samples - num_samples_env1
@@ -137,7 +174,6 @@ def scm_same(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01, dev
     if entangle:
         data_input = scramble(torch.FloatTensor(data_input))
     return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
-
 
 def scm1(seed, env1, env2,
          num_samples):
@@ -326,6 +362,8 @@ def scm_ac(seed:int, env1: Tuple=(0.25, 0.20),
     data_combined = np.append(data_env1, data_env2, axis=0)
     rng.shuffle(data_combined)    
     return torch.tensor(data_combined[:,0:2]).to(torch.float), torch.tensor(data_combined[:,-1].astype(int))
+
+
 
 if __name__ == '__main__':
     sd = 0.075

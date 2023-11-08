@@ -35,6 +35,8 @@ def mi_score(preds, n_largest, train_indices, prop, return_all_scores=False):
     # the whole dataset, and removes items which are no longer
     # in the poolset. 
     # returns index of data with respect to whole dataset
+
+    # majority data comes first.
     majority_data = int(np.floor(preds[0].shape[0]*prop))
     minority_data = preds[0].shape[0] - majority_data
     preds = np.stack(preds)
