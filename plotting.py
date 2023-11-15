@@ -4,30 +4,52 @@ import numpy as np
 import torch
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-
-
 def plotting_function(data, target, data_test,
                       target_test,  data_train,
-                      target_train, model):
+                      target_train, model, predicted=False, logits=False):
     fig, axs = plt.subplots(3,1)
     # all data
-    preds = torch.argmax(model(data), axis=1)
+    if logits:
+        preds = (model(data) > 0)*1
+    else:
+        preds = torch.argmax(model(data), axis=1)
+    if predicted: 
+        to_plot = preds
+    else:
+        to_plot = target
     correct = ((preds - target).abs() < 1e-2)
-    colours = ['green' if item else 'red' for item in target]
+    colours = ['green' if item else 'red' for item in to_plot]
     axs[0].scatter(data[:,0].cpu().detach().numpy(), data[:,1].cpu().detach().numpy(), color=colours)
     axs[0].set_title('all data')
 
     # test data
-    preds = torch.argmax(model(data_test), axis=1)
+    if logits:
+        preds = (model(data_test) > 0)*1
+    else:
+        preds = torch.argmax(model(data_test), axis=1)
+        
+    if predicted: 
+        to_plot = preds
+    else:
+        to_plot = target_test
+
     correct = ((preds - target_test).abs() < 1e-2)
-    colours = ['green' if item else 'red' for item in target_test]
+    colours = ['green' if item else 'red' for item in to_plot]
     axs[1].scatter(data_test[:,0].cpu().detach().numpy(),
                    data_test[:,1].cpu().detach().numpy(), color=colours)
     axs[1].set_title('all test')
     # train data
-    preds = torch.argmax(model(data_train), axis=1)
+    if logits:
+        preds = (model(data_train) > 0)*1
+    else:
+        preds = torch.argmax(model(data_train), axis=1)        
+    if predicted: 
+        to_plot = preds
+    else:
+        to_plot = target_train
+
     correct = ((preds - target_train).abs() < 1e-2)
-    colours = ['green' if item else 'red' for item in target_train]
+    colours = ['green' if item else 'red' for item in to_plot]
     axs[2].scatter(data_train[:,0].cpu().detach().numpy(),
                    data_train[:,1].cpu().detach().numpy(), color=colours)
     axs[2].set_title('all train')
@@ -37,7 +59,7 @@ def plotting_function(data, target, data_test,
     for ax in axs.flat:
         ax.label_outer()
 
-    #plt.show()
+    # plt.show()
     return fig
 
 def plotting_uncertainties(data, data_train, data_test, target_test, model, scorer, train_indices, model_reg,
