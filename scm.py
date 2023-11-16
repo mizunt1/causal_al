@@ -19,12 +19,8 @@ def scramble(data, dim_inv=1, dim_spu=1):
 def scm_i(seed, prop_1, num_samples, device):
     rng = np.random.default_rng(seed)
     # env1 is majority group always. Majority group has lower indices
-    if prop_1 >1:
-        num_samples_env2 = int(prop_1)
-        num_samples_env1 = int(num_samples - prop_1)
-    else:
-        num_samples_env1 = int(np.ceil(prop_1*num_samples))
-        num_samples_env2 = num_samples - num_samples_env1
+    num_samples_env1 = int(np.ceil(prop_1*num_samples))
+    num_samples_env2 = num_samples - num_samples_env1
     sigma1_e1 = 0.5
     sigma2_e1 = 0.1
     # environment one has partially informative causal 
@@ -49,6 +45,40 @@ def scm_i(seed, prop_1, num_samples, device):
     data_output = np.append(y_e1, y_e2)
     return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
 
+def combine_envs(data_input_e1, data_input_e2, y_e1, y_e2):
+    data_input = torch.cat((data_input_e1, data_input_e2))
+    data_output = torch.cat((y_e1, y_e2))
+    return data_input, data_output
+
+def scm_i_sep(seed, num_samples, device, environment):
+    rng = np.random.default_rng(seed)
+    # env1 is majority group always. Majority group has lower indices
+    num_samples_env1 = num_samples
+    num_samples_env2 = num_samples
+    sigma1_e1 = 0.5
+    sigma2_e1 = 0.1
+    # environment one has partially informative causal 
+    means = rng.normal(0, 0.2, size=num_samples_env1)    
+    x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
+    y_step = rng.normal(x2_e1, sigma1_e1)
+    y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1_e1 = rng.normal(y_e1, [sigma2_e1 for i in range(len(means))])
+    
+    sigma1_e2 = 0.1
+    sigma2_e2 = 0.5
+    # environment 2 has fully informative causal feature
+    means = rng.normal(0, 0.2, size=num_samples_env2)    
+    x2_e2 = rng.normal(means, [0.5 for i in range(len(means))])
+    y_step = rng.normal(x2_e2, sigma1_e2)
+    y_e2 = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1_e2 = rng.normal(y_e2, [sigma2_e2 for i in range(len(means))])
+    
+    data_input_e1 = np.hstack((np.expand_dims(x1_e1, axis=1), np.expand_dims(x2_e1, axis=1)))
+    data_input_e2 = np.hstack((np.expand_dims(x1_e2, axis=1), np.expand_dims(x2_e2, axis=1)))
+    if environment == 1:
+        return torch.tensor(data_input_e1).to(torch.float).to(device), torch.tensor(y_e1.astype(int)).to(device)
+    else:
+        return torch.tensor(data_input_e2).to(torch.float).to(device), torch.tensor(y_e2.astype(int)).to(device)
 
 def scm_f(seed, prop_1, num_samples, device):
     rng = np.random.default_rng(seed)

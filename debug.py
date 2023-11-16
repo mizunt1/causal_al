@@ -2,7 +2,7 @@ import numpy as np
 import torch 
 import wandb
 
-from scm import scm_rand_corr, scm_anti_corr, scm_same, scm_f, scm_i
+from scm import scm_rand_corr, scm_anti_corr, scm_same, scm_f, scm_i, scm_i_sep, combine_envs
 from models.drop_out_model import Model, train, test
 from plotting import plotting_function, plotting_uncertainties
 from models.model_reg import ModelReg, train_reg, test_reg
@@ -18,6 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--data_size_test', type=int, default=1000)
     parser.add_argument('--num_models', type=int, default=10) 
     parser.add_argument('--proportion', type=float, default=1.0)
+    parser.add_argument('--num_env2', type=int, default=None)
     parser.add_argument('--num_epochs', type=int, default=3010)
     parser.add_argument('--lr', type=float, default=1e-2)
     parser.add_argument('--project_name', type=str, default='causal_al')
@@ -41,14 +42,11 @@ if __name__ == "__main__":
     )
     wandb.config.update(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    data_test, target_test = scm_anti_corr(
+    
+    if args.data == 'anti_corr':
+        data_test, target_test = scm_anti_corr(
             args.seed+1, prop_1=(1-args.proportion),
             entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_test, device=device)
-    data_pool, target_pool = scm_anti_corr(
-        args.seed, prop_1=args.proportion,
-        entangle=args.non_lin_entangle, flip_y=0, num_samples=args.data_size_pool, device=device)
-
-    if args.data == 'anti_corr':
         if args.erm:
             # train data for erm is merged across environments
             data_train, target_train = scm_anti_corr(
@@ -94,22 +92,30 @@ if __name__ == "__main__":
 
 
     if args.data == 'scm_i':
-        data_test, target_test = scm_i(args.seed +1, 1-args.proportion, args.data_size_test, device)
-        data_train_e1, target_train_e1 = scm_i(
-            args.seed, prop_1=1,
-            num_samples=int(args.data_size_train*args.proportion), device=device)
-        print("number of points in env 1: {}".format(len(target_train_e1)))
-        env1 = {'images': data_train_e1, 'labels': target_train_e1.float()}
-        data_train_e2, target_train_e2 = scm_i(
-            args.seed, prop_1=0,
-            num_samples=int(args.data_size_train*(1-args.proportion)), device=device)
-        print("number of points in env 2: {}".format(len(target_train_e2)))
-        env2 = {'images': data_train_e2, 'labels': target_train_e2.float()}
+        if args.proportion < 1:
+            num_samples_e1 = int(args.proportion*args.data_size_train)
+            test_num_samples_e1 = int(1-args.proportion)
+        else:
+            num_samples_e1 = int(args.proportion)
+            test_num_samples_e1 = int(args.data_size_test - args.proportion)
+        num_samples_e2 = int(args.data_size_train - num_samples_e1)
+        test_num_samples_e2 = int(args.data_size_test - test_num_samples_e1)
+        data_e1, target_e1 = scm_i_sep(args.seed, num_samples_e1, device, environment=1)
+        data_e2, target_e2 = scm_i_sep(args.seed, num_samples_e2, device, environment=2)
+        data, target = combine_envs(data_e1, data_e2, target_e1, target_e2)
+        data_e1_test, target_e1_test = scm_i_sep(args.seed, test_num_samples_e1, device, environment=1)
+        data_e2_test, target_e2_test = scm_i_sep(args.seed, test_num_samples_e2, device, environment=2)
+        data_test, target_test = combine_envs(data_e1_test, data_e2_test, target_e1_test, target_e2_test)
+
+        print("number of points in env 1: {}".format(len(target_e1)))
+        env1 = {'images': data_e1, 'labels': target_e1.float()}
+        print("number of points in env 2: {}".format(len(target_e2)))
+        env2 = {'images': data_e2, 'labels': target_e2.float()}
         env3 = {'images': data_test, 'labels': target_test.float()}
         env_train = [env1, env2]
         env_test = env3
-        data_train = torch.cat((data_train_e1, data_train_e2))
-        target_train = torch.cat((target_train_e1, target_train_e2))
+        data_train = torch.cat((data_e1, data_e2))
+        target_train = torch.cat((target_e1, target_e2))
     data_pool, target_pool = data_train, target_train
 
     input_size = 2
