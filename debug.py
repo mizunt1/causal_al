@@ -7,11 +7,12 @@ from models.drop_out_model import Model, train, test
 from plotting import plotting_function, plotting_uncertainties
 from models.model_reg import ModelReg, train_reg, test_reg
 from irm.colored_mnist.main import MLP_IRM_SIMULATED, train
+from sklearn.linear_model import LogisticRegression
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
     parser = ArgumentParser()
-    parser.add_argument('--data', choices=['rand_corr', 'anti_corr','scm_f','same', 'scm_i'], default='anti_corr')
+    parser.add_argument('--data', choices=['rand_corr', 'anti_corr','scm_f','same', 'scm_i'], default='scm_i')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--data_size_train', type=int, default=1000)
     parser.add_argument('--data_size_pool', type=int, default=1000)
@@ -93,13 +94,13 @@ if __name__ == "__main__":
 
     if args.data == 'scm_i':
         if args.proportion < 1:
-            num_samples_e1 = int(args.proportion*args.data_size_train)
-            test_num_samples_e1 = int(1-args.proportion)
+            num_samples_e1 = round(args.proportion*args.data_size_train)
+            test_num_samples_e1 = round(1-args.proportion)
         else:
-            num_samples_e1 = int(args.proportion)
-            test_num_samples_e1 = int(args.data_size_test - args.proportion)
-        num_samples_e2 = int(args.data_size_train - num_samples_e1)
-        test_num_samples_e2 = int(args.data_size_test - test_num_samples_e1)
+            num_samples_e1 = round(args.proportion)
+            test_num_samples_e1 = round(args.data_size_test - args.proportion)
+        num_samples_e2 = round(args.data_size_train - num_samples_e1)
+        test_num_samples_e2 = round(args.data_size_test - test_num_samples_e1)
         data_e1, target_e1 = scm_i_sep(args.seed, num_samples_e1, device, environment=1)
         data_e2, target_e2 = scm_i_sep(args.seed, num_samples_e2, device, environment=2)
         data, target = combine_envs(data_e1, data_e2, target_e1, target_e2)
@@ -126,7 +127,7 @@ if __name__ == "__main__":
     models = MLP_IRM_SIMULATED()
     models.to(device)
     train_acc, test_acc = train(models, args, env_train, env_test, args.irm)
-    
+
     if args.plot:
         logits = True
         plt = plotting_function(data_pool, target_pool, data_test,

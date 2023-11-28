@@ -59,7 +59,7 @@ def plotting_function(data, target, data_test,
     for ax in axs.flat:
         ax.label_outer()
 
-    # plt.show()
+    plt.show()
     return fig
 
 def plotting_uncertainties(data, data_train, data_test, target_test, model, scorer, train_indices, model_reg,

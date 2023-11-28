@@ -4,7 +4,7 @@ import torch
 import random
 import wandb
 
-from scm import scm_rand_corr, scm_anti_corr, scm_same, scm_f, scm_i
+from scm import scm_rand_corr, scm_anti_corr, scm_same, scm_f, scm_i, scm_i_sep, combine_envs
 from scores import mi_score, ent_score, reg_score
 from models.drop_out_model import Model, train, test
 from models.model_reg import ModelReg, train_reg, test_reg
@@ -213,8 +213,21 @@ if __name__ == "__main__":
         data_test, target_test = scm_f(args.seed +1, args.proportion, args.test_size, device)
 
     if args.data == 'scm_i':
-        data, target = scm_i(args.seed, args.proportion, args.pool_size, device)
-        data_test, target_test = scm_i(args.seed +1, 1-args.proportion, args.test_size, device)
+        if args.proportion < 1:
+            num_samples_e1 = args.proportion*args.num_samples
+            test_num_samples_e1 = 1-args.proportion
+        else:
+            num_samples_e1 = args.proportion
+            test_num_samples_e1 = args.proportion
+        num_samples_e2 = args.num_samples - num_samples_e1
+        test_num_samples_e2 = args.test_size - test_num_samples_e1
+
+        data_e1, target_e1 = scm_i_sep(args.seed, num_samples_e1, device, environment=1)
+        data_e2, target_e2 = scm_i_sep(args.seed, num_samples_e2, device, environment=2)
+        data, target = combine_envs(data_e1, data_e2, target_e1, target_e2)
+        data_e1_test, target_e1_test = scm_i_sep(args.seed, test_num_samples_e1, args.pool_size, device, environment=1)
+        data_e2_test, target_e2_test = scm_i_sep(args.seed, test_num_samples_e2, args.pool_size, device, environment=2)
+        data_test, target_test = combine_envs(data_e1_test, data_e2_test, target_e1_test, target_e2_test)
     input_size = 2
     
     #data, target = scm.sample(split='train')

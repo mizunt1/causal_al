@@ -21,8 +21,8 @@ def scm_i(seed, prop_1, num_samples, device):
     # env1 is majority group always. Majority group has lower indices
     num_samples_env1 = int(np.ceil(prop_1*num_samples))
     num_samples_env2 = num_samples - num_samples_env1
-    sigma1_e1 = 0.5
-    sigma2_e1 = 0.1
+    sigma1_e1 = 0.1
+    sigma2_e1 = 0.5
     # environment one has partially informative causal 
     means = rng.normal(0, 0.2, size=num_samples_env1)    
     x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
@@ -30,8 +30,8 @@ def scm_i(seed, prop_1, num_samples, device):
     y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
     x1_e1 = rng.normal(y_e1, [sigma2_e1 for i in range(len(means))])
     
-    sigma1_e2 = 0.1
-    sigma2_e2 = 0.5
+    sigma1_e2 = 0.5
+    sigma2_e2 = 0.1
     # environment 2 has fully informative causal feature
     means = rng.normal(0, 0.2, size=num_samples_env2)    
     x2_e2 = rng.normal(means, [0.5 for i in range(len(means))])
@@ -50,28 +50,49 @@ def combine_envs(data_input_e1, data_input_e2, y_e1, y_e2):
     data_output = torch.cat((y_e1, y_e2))
     return data_input, data_output
 
-def scm_i_sep(seed, num_samples, device, environment):
+def combine_many_envs(datas, targets):
+    data_input = torch.cat(datas)
+    data_output = torch.cat(targets)
+    mean = data_input.mean(dim=0, keepdim=True)
+    std = data_input.std(dim=0, keepdim=True)
+    data_input = (data_input - mean)/std
+    return data_input, data_output
+
+def standardise_envs(datas):
+    data_input = torch.cat(datas)
+    mean = data_input.mean(dim=0, keepdim=True)
+    std = data_input.std(dim=0, keepdim=True)
+    data_ret = []
+    for data in datas:
+        (data - mean)/std
+        data_ret.append(data)
+    return data_ret
+
+
+def scm_i_sep(seed, num_samples, device, environment,
+              env1_noise=(0.5, 0.1), env2_noise=(0.1, 0.5)):
     rng = np.random.default_rng(seed)
     # env1 is majority group always. Majority group has lower indices
     num_samples_env1 = num_samples
     num_samples_env2 = num_samples
-    sigma1_e1 = 0.5
-    sigma2_e1 = 0.1
-    # environment one has partially informative causal 
+    sigma1_e1 = env1_noise[0]
+    sigma2_e1 = env1_noise[1]
+    # environment one has fully informative causal 
+    # i.e. noise for sigma 2 is smaller
     means = rng.normal(0, 0.2, size=num_samples_env1)    
     x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
-    y_step = rng.normal(x2_e1, sigma1_e1)
+    y_step = rng.normal(x2_e1, sigma2_e1)
     y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
-    x1_e1 = rng.normal(y_e1, [sigma2_e1 for i in range(len(means))])
+    x1_e1 = rng.normal(y_e1, [sigma1_e1 for i in range(len(means))])
     
-    sigma1_e2 = 0.1
-    sigma2_e2 = 0.5
+    sigma1_e2 = env2_noise[0]
+    sigma2_e2 = env2_noise[1]
     # environment 2 has fully informative causal feature
     means = rng.normal(0, 0.2, size=num_samples_env2)    
     x2_e2 = rng.normal(means, [0.5 for i in range(len(means))])
-    y_step = rng.normal(x2_e2, sigma1_e2)
+    y_step = rng.normal(x2_e2, sigma2_e2)
     y_e2 = np.asarray([int(y_val > 0) for y_val in y_step])
-    x1_e2 = rng.normal(y_e2, [sigma2_e2 for i in range(len(means))])
+    x1_e2 = rng.normal(y_e2, [sigma1_e2 for i in range(len(means))])
     
     data_input_e1 = np.hstack((np.expand_dims(x1_e1, axis=1), np.expand_dims(x2_e1, axis=1)))
     data_input_e2 = np.hstack((np.expand_dims(x1_e2, axis=1), np.expand_dims(x2_e2, axis=1)))
@@ -79,6 +100,21 @@ def scm_i_sep(seed, num_samples, device, environment):
         return torch.tensor(data_input_e1).to(torch.float).to(device), torch.tensor(y_e1.astype(int)).to(device)
     else:
         return torch.tensor(data_input_e2).to(torch.float).to(device), torch.tensor(y_e2.astype(int)).to(device)
+
+def scm_i_one_env(seed, num_samples, device, noise_x1=0.1, noise_x2=0.1):
+    rng = np.random.default_rng(seed)
+    num_samples_env1 = num_samples
+
+    # environment one has partially informative causal 
+    # i.e. noise for sigma 2 is larger
+    means = rng.normal(0, 0.2, size=num_samples_env1)    
+    x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
+    y_step = rng.normal(x2_e1, noise_x2)
+    y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1_e1 = rng.normal(y_e1, [noise_x1 for i in range(len(means))])
+    data_input_e1 = np.hstack((np.expand_dims(x1_e1, axis=1), np.expand_dims(x2_e1, axis=1)))
+    return torch.tensor(
+        data_input_e1).to(torch.float).to(device), torch.tensor(y_e1.astype(int)).to(device)
 
 def scm_f(seed, prop_1, num_samples, device):
     rng = np.random.default_rng(seed)

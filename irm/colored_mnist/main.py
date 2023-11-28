@@ -11,6 +11,28 @@ import torch
 from torchvision import datasets
 from torch import nn, optim, autograd
 
+def accuracy(predicted, target):
+    return np.sum((predicted == target))/ len(target)
+
+def worst_group_acc(predicted, target, groups):
+    # groups correspond to list of indices, where each item corresponds
+    # to a starting point for each group.
+    accuracies = []
+    current_idx = 0
+    for idx in range(len(groups)):
+        predicted_section = predicted[current_idx: groups[idx]]
+
+        target_section = target[current_idx: groups[idx]]
+        current_idx = groups[idx]
+        acc = mean_accuracy(predicted_section, target_section)
+        if len(target_section) != 0:
+            accuracies.append(acc.detach().cpu().item())
+    predicted_section = predicted[current_idx:]
+    target_section = target[current_idx:]
+    acc = mean_accuracy(predicted_section, target_section)
+    accuracies.append(acc.detach().cpu().numpy())
+    return min(np.array(accuracies))
+
 def make_environment(images, labels, e):
   def torch_bernoulli(p, size):
     return (torch.rand(size) < p).float()
@@ -33,6 +55,17 @@ def make_environment(images, labels, e):
 
 # Define and instantiate the model
 
+class Log_reg(nn.Module):
+    def __init__(self):
+        super(Log_reg, self).__init__()
+        self.linear1 = torch.nn.Linear(2, 1)
+        #self.act = torch.nn.Sigmoid()
+    def forward(self, x):
+        x = self.linear1(x)
+        #x = self.act(x)
+        return x.squeeze(1)
+
+
 class MLP_IRM_MNIST(nn.Module):
   def __init__(self):
     super(MLP_IRM_MNIST, self).__init__()
@@ -53,6 +86,7 @@ class MLP_IRM_MNIST(nn.Module):
       out = input.view(input.shape[0], 2 * 14 * 14)
     out = self._main(out)
     return out
+
 
 # Define loss function helpers
 class MLP_IRM_SIMULATED(nn.Module):
@@ -93,11 +127,13 @@ def pretty_print(*values):
   print("   ".join(str_values))
 
 # Train loop
-def train(mlp, flags, envs_train, env_test, irm):
-  optimizer = optim.Adam(mlp.parameters(), lr=flags.lr_irm)
-  pretty_print('step', 'train nll', 'train acc', 'train penalty', 'test acc')
+def train(mlp, envs_train, env_test, irm, lr_irm, groups, l2_regularizer_weight, penalty_weight, penalty_anneal_iters, print_=False):
+  optimizer = optim.Adam(mlp.parameters(), lr=lr_irm)
+  if print_:
+    pretty_print('step', 'train nll', 'train acc', 'train acc w', 'train penalty', 'test acc', 'worst test ac')
   non_empt_envs = []
-  for step in range(flags.steps):
+  size_of_envs = []
+  for step in range(500):
     for env in envs_train:
       # last env is test env
       logits = mlp(env['images'])
@@ -106,39 +142,50 @@ def train(mlp, flags, envs_train, env_test, irm):
       env['penalty'] = penalty(logits, env['labels'])
       if len(env['labels']) != 0:
         non_empt_envs.append(env)
-    
+        size_of_envs.append(len(env['labels']))
     train_nll = torch.stack([non_empt_envs[i]['nll'] for i in range(len(non_empt_envs))]).mean()
     train_acc = torch.stack([non_empt_envs[i]['acc'] for i in range(len(non_empt_envs))]).mean()
+    train_acc_weighted = torch.stack(
+      [non_empt_envs[i]['acc']*size_of_envs[i] for i in range(len(non_empt_envs))]).sum()/sum(size_of_envs)
+    train_nll_weighted = torch.stack(
+      [non_empt_envs[i]['nll']*size_of_envs[i] for i in range(len(non_empt_envs))]).sum()/sum(size_of_envs)
+        
     train_penalty = torch.stack([non_empt_envs[i]['penalty'] for i in range(len(non_empt_envs))]).mean()
     weight_norm = torch.tensor(0.).cuda()
     for w in mlp.parameters():
       weight_norm += w.norm().pow(2)  
     if irm:
       loss = train_nll.clone()
-      loss += flags.l2_regularizer_weight * weight_norm
-      penalty_weight = (flags.penalty_weight 
-                        if step >= flags.penalty_anneal_iters else 1.0)
+      loss += l2_regularizer_weight * weight_norm
+      penalty_weight = (penalty_weight 
+                        if step >= penalty_anneal_iters else 1.0)
       loss += penalty_weight * train_penalty
       if penalty_weight > 1.0:
         # Rescale the entire loss to keep gradients in a reasonable range
         loss /= penalty_weight
     else:
-      loss = train_nll
+      
+      loss = train_nll_weighted
 
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
     test_acc = mean_accuracy(mlp(env_test['images']),env_test['labels'])
+    worst = worst_group_acc(mlp(env_test['images']),
+                                env_test['labels'], groups)
     if step % 100 == 0:
-      pretty_print(
-        np.int32(step),
-        train_nll.detach().cpu().numpy(),
-        train_acc.detach().cpu().numpy(),
-        train_penalty.detach().cpu().numpy(),
-        test_acc.detach().cpu().numpy()
-      )
-  return train_acc, test_acc
+      if print_:
+        pretty_print(
+          np.int32(step),
+          train_nll.detach().cpu().numpy(),
+          train_acc.detach().cpu().numpy(),
+          train_acc_weighted.detach().cpu().numpy(),
+          train_penalty.detach().cpu().numpy(),
+          test_acc.detach().cpu().numpy(),
+          worst
+        )
+  return train_acc, test_acc, worst, train_acc_weighted
 
 def train_erm(mlp, flags, data_train, target_train):
     optimizer = optim.Adam(mlp.parameters(), lr=flags.lr_irm)
