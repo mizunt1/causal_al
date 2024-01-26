@@ -76,7 +76,7 @@ def al_loop_reg(models, model_reg, data, target, data_test, target_test,
         
     print('final train size {}'.format(data_train.shape[0]))
     prop_maj = np.sum(
-        np.where(np.asarray(train_indices) == 1)[0]<majority_data)/len(
+        np .where(np.asarray(train_indices) == 1)[0]<majority_data)/len(
             np.where(np.asarray(train_indices) ==1)[0])
     prop_minority = np.sum(
             np.where(np.asarray(train_indices) == 1)[0]>majority_data)/len(

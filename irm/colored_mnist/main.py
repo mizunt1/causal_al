@@ -4,10 +4,10 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
 import argparse
 import numpy as np
 import torch
+import copy
 from torchvision import datasets
 from torch import nn, optim, autograd
 
@@ -127,15 +127,17 @@ def pretty_print(*values):
   print("   ".join(str_values))
 
 # Train loop
-def train(mlp, envs_train, env_test, irm, lr_irm, groups, l2_regularizer_weight, penalty_weight, penalty_anneal_iters, print_=False):
-  optimizer = optim.Adam(mlp.parameters(), lr=lr_irm)
+def train(mlp, envs_train, env_test, irm, lr, groups_test,
+          l2_regularizer_weight, penalty_weight, penalty_anneal_iters, print_=False):
+  """ envs train is a list of dictionaries whereas env_test is one dictionary"""
+  optimizer = optim.Adam(mlp.parameters(), lr=lr)
   if print_:
-    pretty_print('step', 'train nll', 'train acc', 'train acc w', 'train penalty', 'test acc', 'worst test ac')
+    pretty_print('step', 'train nll', 'train acc',
+                 'train acc w', 'train penalty', 'test acc', 'worst test ac')
   non_empt_envs = []
   size_of_envs = []
   for step in range(500):
     for env in envs_train:
-      # last env is test env
       logits = mlp(env['images'])
       env['nll'] = mean_nll(logits, env['labels'])
       env['acc'] = mean_accuracy(logits, env['labels'])
@@ -164,16 +166,14 @@ def train(mlp, envs_train, env_test, irm, lr_irm, groups, l2_regularizer_weight,
         # Rescale the entire loss to keep gradients in a reasonable range
         loss /= penalty_weight
     else:
-      
-      loss = train_nll_weighted
+      loss = train_nll_weighted + l2_regularizer_weight * weight_norm
 
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
-
     test_acc = mean_accuracy(mlp(env_test['images']),env_test['labels'])
     worst = worst_group_acc(mlp(env_test['images']),
-                                env_test['labels'], groups)
+                                env_test['labels'], groups_test)
     if step % 100 == 0:
       if print_:
         pretty_print(
@@ -186,6 +186,22 @@ def train(mlp, envs_train, env_test, irm, lr_irm, groups, l2_regularizer_weight,
           worst
         )
   return train_acc, test_acc, worst, train_acc_weighted
+
+def test_erm_irm(mlp, env_test, groups_test, mask):
+    test_acc_standard = mean_accuracy(mlp(env_test['images']),env_test['labels'])
+    
+    env_test_copy = copy.deepcopy(env_test)
+    if mask == 'causal':
+        env_test_copy['images'][:, 1] = torch.normal(mean=torch.zeros(len(env_test['images'])))
+
+    elif mask == 'sp':
+        env_test_copy['images'][:, 0] = torch.normal(mean=torch.zeros(len(env_test['images'])))
+    else:
+        pass
+    test_acc = mean_accuracy(mlp(env_test_copy['images']),env_test['labels'])
+    worst = worst_group_acc(mlp(env_test_copy['images']),
+                                env_test['labels'], groups_test)
+    return test_acc, worst, test_acc_standard
 
 def train_erm(mlp, flags, data_train, target_train):
     optimizer = optim.Adam(mlp.parameters(), lr=flags.lr_irm)

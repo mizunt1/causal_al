@@ -3,6 +3,7 @@ from collections import namedtuple
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+
 seed=0
 torch.manual_seed(0)
 
@@ -66,8 +67,10 @@ def standardise_envs(datas):
     for data in datas:
         (data - mean)/std
         data_ret.append(data)
-    return data_ret
-
+    if len(data_ret) == 1:
+        return data_ret[0]
+    else:
+        return tuple(data_ret)
 
 def scm_i_sep(seed, num_samples, device, environment,
               env1_noise=(0.5, 0.1), env2_noise=(0.1, 0.5)):
@@ -101,20 +104,60 @@ def scm_i_sep(seed, num_samples, device, environment,
     else:
         return torch.tensor(data_input_e2).to(torch.float).to(device), torch.tensor(y_e2.astype(int)).to(device)
 
-def scm_i_one_env(seed, num_samples, device, noise_x1=0.1, noise_x2=0.1):
+def scm_i_one_env_mechs_test1(seed, num_samples, device, test):
+    """ returns single chain graph environment. 
+    Effect of complexity of mechanisms tested"""
     rng = np.random.default_rng(seed)
     num_samples_env1 = num_samples
+    x2 = rng.normal(0, 0.5, size=num_samples_env1)    
+    y_step = (-2*x2 + 0.2)**3 - 0.1
+    y = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1 = 2*y + 1
+    if test:
+        x1 = -2*y + 0.5
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+    return torch.tensor(
+        data_input_e1).to(torch.float).to(device), torch.tensor(y.astype(int)).to(device)
 
+def scm_i_one_env_mechs_test2(seed, num_samples, device, test):
+    """ returns single chain graph environment. 
+    Effect of complexity of mechanisms tested"""
+    rng = np.random.default_rng(seed)
+    num_samples_env1 = num_samples
+    x2 = rng.normal(0, 0.5, size=num_samples_env1)    
+    y_step = (-2*x2 + 0.2)**3 - 0.1
+    if test:
+        y_step = (2*x2 + 1)**3 -0.1
+    y = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1 = 2*y + 1
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+    return torch.tensor(
+        data_input_e1).to(torch.float).to(device), torch.tensor(y.astype(int)).to(device)
+
+def scm_i_one_env_mechs_test3(seed, num_samples, device, test):
+    """ returns single chain graph environment. 
+    Effect of complexity of mechanisms tested"""
+    rng = np.random.default_rng(seed)
+    num_samples_env1 = num_samples
+    x2 = rng.normal(0, 0.5, size=num_samples_env1)    
+    y_step = (-2*x2 + 0.2)**3 - 0.1
+    y = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1 = 2*y + 1
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+    return torch.tensor(
+        data_input_e1).to(torch.float).to(device), torch.tensor(y.astype(int)).to(device)
+
+def scm_i_one_env(seed, num_samples, device, noise_x1=0.1, noise_x2=0.1):
+    rng = np.random.default_rng(seed)
     # environment one has partially informative causal 
     # i.e. noise for sigma 2 is larger
-    means = rng.normal(0, 0.2, size=num_samples_env1)    
-    x2_e1 = rng.normal(means, [0.5 for i in range(len(means))])
-    y_step = rng.normal(x2_e1, noise_x2)
-    y_e1 = np.asarray([int(y_val > 0) for y_val in y_step])
-    x1_e1 = rng.normal(y_e1, [noise_x1 for i in range(len(means))])
-    data_input_e1 = np.hstack((np.expand_dims(x1_e1, axis=1), np.expand_dims(x2_e1, axis=1)))
+    x2 = rng.normal(0, 0.2, size=num_samples)    
+    y_step = rng.normal(x2, noise_x2)
+    y = np.asarray([int(y_val > 0) for y_val in y_step])
+    x1 = rng.normal(y, [noise_x1 for i in range(len(x2))])
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
     return torch.tensor(
-        data_input_e1).to(torch.float).to(device), torch.tensor(y_e1.astype(int)).to(device)
+        data_input_e1).to(torch.float).to(device), torch.tensor(y.astype(int)).to(device)
 
 def scm_f(seed, prop_1, num_samples, device):
     rng = np.random.default_rng(seed)
@@ -145,39 +188,51 @@ def scm_f(seed, prop_1, num_samples, device):
     data_output = np.append(target_e1, target_e2)
     return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
 
-def scm_anti_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01, device='cuda'):
+def scm_anti_corr(seed, num_samples, environment, noise=0.5, entangle=False, flip_y=0, device='cuda'):
     # in environment e1, x1 and x2 is correlated
     # in environment e2 the mean is flipped for sampling x1s.
     rng = np.random.default_rng(seed)
-    if prop_1 >1:
-        num_samples_env2 = int(prop_1)
-        num_samples_env1 = int(num_samples - prop_1)
-    else:
-        num_samples_env1 = int(np.ceil(prop_1*num_samples))
-        num_samples_env2 = num_samples - num_samples_env1
-
-    means = rng.normal(0, 1, size=num_samples_env1)
-    x1 = rng.normal(means, [0.5 for i in range(len(means))])
-    x2 = rng.normal(means, [0.5 for i in range(len(means))])
+    means = rng.normal(0, 1, size=num_samples)
+    x1 = rng.normal(means, [noise for i in range(len(means))])
+    x2 = rng.normal(means, [noise for i in range(len(means))])
     target_e1 = np.asarray([int(x2_val > 0) for x2_val in x2])
-    flipped = rng.choice([0,1], size =num_samples_env1, p=[1-flip_y, flip_y])
+    flipped = rng.choice([0,1], size =num_samples, p=[1-flip_y, flip_y])
     y_flipped_e1 = [int(y^1) if z else int(y) for y,z in zip(target_e1, flipped)]
     data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
 
     e2 = -1
-    means = rng.normal(0, 1, size=num_samples_env2)
-    x1 = rng.normal(means, [0.5 for i in range(len(means))])
-    x2 = rng.normal(e2*means, [0.5 for i in range(len(means))])
+    means = rng.normal(0, 1, size=num_samples)
+    x1 = rng.normal(means, [noise for i in range(len(means))])
+    x2 = rng.normal(e2*means, [noise for i in range(len(means))])
     target_e2 = np.asarray([int(x2_val > 0) for x2_val in x2])
     data_input_e2 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
                             
-    flipped = rng.choice([0,1], size =num_samples_env2, p=[1-flip_y, flip_y])
+    flipped = rng.choice([0,1], size =num_samples, p=[1-flip_y, flip_y])
     y_flipped_e2 = [int(y^1) if z else int(y) for y,z in zip(target_e2, flipped)]
-    data_input = np.append(data_input_e1, data_input_e2, axis=0)
-    data_output = np.append(y_flipped_e1, y_flipped_e2)
     if entangle:
-        data_input = scramble(torch.FloatTensor(data_input))
-    return torch.tensor(data_input).to(torch.float).to(device), torch.tensor(data_output.astype(int)).to(device)
+        data_input_e1 = scramble(torch.FloatTensor(data_input_e1))
+        data_input_e2 = scramble(torch.FloatTensor(data_input_e2))
+    if environment == 1:
+        return torch.tensor(data_input_e1).to(torch.float).to(device), torch.tensor(target_e1.astype(int)).to(device)
+    elif environment == 2:
+        return torch.tensor(data_input_e2).to(torch.float).to(device), torch.tensor(target_e2.astype(int)).to(device)
+    else:
+        print("env not implemented")
+
+def scm_spurr_noise(seed, num_samples, noise=0.5, entangle=False, flip_y=0, device='cuda'):
+    # in environment e1, x1 and x2 is correlated
+    # in environment e2 the mean is flipped for sampling x1s.
+    rng = np.random.default_rng(seed)
+    means = rng.normal(0, 1, size=num_samples)
+    x1 = rng.normal(means, [noise for i in range(len(means))])
+    x2 = rng.normal(means, [noise for i in range(len(means))])
+    target_e1 = np.asarray([int(x2_val > 0) for x2_val in x2])
+    flipped = rng.choice([0,1], size =num_samples, p=[1-flip_y, flip_y])
+    y_flipped_e1 = [int(y^1) if z else int(y) for y,z in zip(target_e1, flipped)]
+    data_input_e1 = np.hstack((np.expand_dims(x1, axis=1), np.expand_dims(x2, axis=1)))
+    if entangle:
+        data_input_e1 = scramble(torch.FloatTensor(data_input_e1))
+    return torch.tensor(data_input_e1).to(torch.float).to(device), torch.tensor(target_e1.astype(int)).to(device)
 
 def scm_rand_corr(seed, prop_1=0.2, num_samples=200, entangle=False, flip_y=0.01, device='cuda'):
     # in environment e1, x1 and x2 is correlated

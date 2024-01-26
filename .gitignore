@@ -2,3 +2,5 @@ simulations/venv/
 simulations/*__
 data/
 simulations/data
+*pyc
+*~
